@@ -206,7 +206,8 @@ def run_experiment(config):
     optimizer = config['optimizer']
     model.compile(optimizer=optimizer, loss=loss_function, loss_metric=loss_metric, obj_function=p_norm)
     history = model.fit(train_dataset, val_dataset,
-                        epochs=config['epochs'], early_stop_patience=config['early_stop_patience'], verbose=0)
+                        epochs=config['epochs'], early_stop_patience=config['early_stop_patience'], verbose=0,
+                        best_model_filepath=config['output_dir'])
     history_df = save_history(history, config)
     save_history_plots(history_df, config)
 

@@ -56,9 +56,9 @@ class Model(ABC):
         self.compile(*self.compile_args)
 
     def train(self, train_dataset, val_dataset, epochs: int = 100, verbose: int = 1,
-              early_stop_patience: int = 100, best_model_filepath: str = 'tmp/'):
-        self.best_model_filepath = best_model_filepath + 'best_weights.h5'
-        self.last_epoch_filepath = best_model_filepath + 'last_epoch_weights.h5'
+              early_stop_patience: int = 100, save_filepath: str = 'tmp/'):
+        self.best_model_filepath = os.path.join(save_filepath, 'best_weights.h5')
+        self.last_epoch_filepath = os.path.join(save_filepath, 'last_epoch_weights.h5')
         nan_terminate = tf.keras.callbacks.TerminateOnNaN()
         early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_rmse_obj', patience=early_stop_patience,
                                                           mode='min', restore_best_weights=True)
