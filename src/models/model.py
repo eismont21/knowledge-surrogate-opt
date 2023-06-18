@@ -61,9 +61,9 @@ class Model(ABC):
         self.last_epoch_filepath = os.path.join(save_filepath, 'last_epoch_weights.h5')
         nan_terminate = tf.keras.callbacks.TerminateOnNaN()
         early_stopping = MultipleEarlyStopping(
-            monitors=['val_loss', 'val_rmse', 'val_mae', 'val_rmse_obj', 'val_tolerance_accuracy'],
-            modes=['min', 'min', 'min', 'min', 'max'],
-            patience=early_stop_patience, restore_best_weights=True, verbose=1)
+            monitors=['val_loss', 'val_rmse', 'val_rmse_obj', 'val_tolerance_accuracy'],
+            modes=['min', 'min', 'min', 'max'],
+            patience=early_stop_patience, restore_best_weights=True)
         model_checkpoint_best = tf.keras.callbacks.ModelCheckpoint(self.best_model_filepath,
                                                                    monitor='val_rmse_obj', mode='min',
                                                                    save_best_only=True,
