@@ -6,3 +6,4 @@ from .ssim_loss_metric import SSIMLossMetric
 from .total_loss_metric import TotalLossMetric
 from .weighted_loss_metric import WeightedLossMetric
 from .dropout_history import DropoutHistory
+from .multiple_early_stopping import MultipleEarlyStopping

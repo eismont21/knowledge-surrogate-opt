@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import tensorflow as tf
-from src.metrics import RMSE, MAE, DifferenceObjectiveFunction, ToleranceAccuracy, DropoutHistory
+from src.metrics import RMSE, MAE, DifferenceObjectiveFunction, ToleranceAccuracy, DropoutHistory, MultipleEarlyStopping
 from src.optimizers import Lion, AdamW
 import numpy as np
 import os
@@ -49,19 +49,21 @@ class Model(ABC):
 
         self.model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
-    def reload(self, is_mc_dropout: bool):
+    def reload(self, is_mc_dropout: bool, filepath: str):
         self.is_mc_dropout = is_mc_dropout
         self.build()
-        self.model.load_weights(self.best_model_filepath)
-        self.compile(*self.compile_args)
+        self.model.load_weights(filepath)
+        # self.compile(*self.compile_args)
 
     def train(self, train_dataset, val_dataset, epochs: int = 100, verbose: int = 1,
               early_stop_patience: int = 100, save_filepath: str = 'tmp/'):
         self.best_model_filepath = os.path.join(save_filepath, 'best_weights.h5')
         self.last_epoch_filepath = os.path.join(save_filepath, 'last_epoch_weights.h5')
         nan_terminate = tf.keras.callbacks.TerminateOnNaN()
-        early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_rmse_obj', patience=early_stop_patience,
-                                                          mode='min', restore_best_weights=True)
+        early_stopping = MultipleEarlyStopping(
+            monitors=['val_loss', 'val_rmse', 'val_mae', 'val_rmse_obj', 'val_tolerance_accuracy'],
+            modes=['min', 'min', 'min', 'min', 'max'],
+            patience=early_stop_patience, restore_best_weights=True, verbose=1)
         model_checkpoint_best = tf.keras.callbacks.ModelCheckpoint(self.best_model_filepath,
                                                                    monitor='val_rmse_obj', mode='min',
                                                                    save_best_only=True,
@@ -75,9 +77,12 @@ class Model(ABC):
         history = self.model.fit(train_dataset, validation_data=val_dataset, epochs=epochs,
                                  verbose=verbose, callbacks=callbacks)
 
-        self.model.load_weights(self.best_model_filepath)
+        self.load_weights(self.best_model_filepath)
 
         return history
+
+    def load_weights(self, filepath: str):
+        self.model.load_weights(filepath)
 
     def evaluate(self, dataset, verbose: int = 0):
         scores = self.model.evaluate(dataset, verbose=verbose)
@@ -128,6 +133,6 @@ class Model(ABC):
         metrics_values = {}
         for metric in self.metrics:
             metric_value = metric(y_true, y_pred).numpy()
-            metrics_values[metric.name] = metric_value
+            metrics_values[metric.name] = np.float64(metric_value)
 
         return metrics_values
