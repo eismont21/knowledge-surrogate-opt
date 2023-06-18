@@ -27,6 +27,7 @@ def main():
             }
             configs.append(config)
 
+    configs = sorted(configs, key=lambda x: x['run'])
     with open('configs_baseline.json', 'w') as f:
         json.dump(configs, f)
 
@@ -56,6 +57,7 @@ def main():
             }
             configs.append(config)
 
+    configs = sorted(configs, key=lambda x: x['run'])
     with open('configs_cnn.json', 'w') as f:
         json.dump(configs, f)
 

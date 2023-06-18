@@ -10,11 +10,13 @@ import json
 import time
 from multiprocessing import Pool
 from tqdm import tqdm
+import traceback
 from src.models import DenseModel, DenseModelDropout, UNet, MultiPathUNet, EncoderDecoder, \
     MultiPathEncoderDecoder
 from src.dataloaders import BaselineDataLoader, ImagesDataLoader, VectorImagesDataLoader
 from src.loss_functions import SSIMLoss, TotalLoss, WeightedLoss
 from src.metrics import SSIMLossMetric, TotalLossMetric, WeightedLossMetric, MAE, RMSE
+from src.utils.send_logs import send_log_tg
 
 
 def iterative_split(iterations, train_size=None, test_size=None, train_ratio=None,
@@ -153,13 +155,13 @@ def save_history(history, config):
 
 def save_history_plots(history_df, config):
     metrics_dir = os.path.join(config['output_dir'], 'metrics')
-    metrics = [col for col in history_df.columns if not col.startswith('val_')]
+    metrics = [col for col in history_df.columns if not col.startswith('val_') and col != 'epoch']
     dropout_metrics = [col for col in metrics if 'dropout' in col]
     other_metrics = [col for col in metrics if col not in dropout_metrics]
 
     for metric in other_metrics:
         name = metric.replace("_", " ")
-        plt.figure(figsize=(10, 10), dpi=300)
+        plt.figure(figsize=(10, 10), dpi=140)
         sns.lineplot(data=history_df, x='epoch', y=metric, label='Train')
         sns.lineplot(data=history_df, x='epoch', y=f'val_{metric}', label='Val')
         plt.xlabel('Epoch')
@@ -169,13 +171,13 @@ def save_history_plots(history_df, config):
         plt.close()
 
     if len(dropout_metrics) != 0:
-        plt.figure(figsize=(10, 10), dpi=300)
-        sns.lineplot(data=history_df, x='epoch', y=dropout_metrics)
+        plt.figure(figsize=(10, 10), dpi=140)
+        for dropout_metric in dropout_metrics:
+            sns.lineplot(data=history_df, x='epoch', y=dropout_metric,
+                         label=dropout_metric.replace('dropout_rate_', ''))
         plt.xlabel('Epoch')
         plt.ylabel('Dropout Rate')
-        handles, labels = plt.gca().get_legend_handles_labels()
-        new_labels = [label.replace('dropout_rate_', '') for label in labels]
-        plt.legend(handles, new_labels)
+        plt.legend()
         plt.title('Concrete Dropout')
         plt.savefig(os.path.join(metrics_dir, 'dropouts.png'))
         plt.close()
@@ -205,21 +207,31 @@ def run_experiment(config):
     loss_function, loss_metric = get_loss_function(config)
     optimizer = config['optimizer']
     model.compile(optimizer=optimizer, loss=loss_function, loss_metric=loss_metric, obj_function=p_norm)
-    history = model.fit(train_dataset, val_dataset,
-                        epochs=config['epochs'], early_stop_patience=config['early_stop_patience'], verbose=0,
-                        best_model_filepath=config['output_dir'])
+    history = model.train(train_dataset, val_dataset,
+                          epochs=config['epochs'], early_stop_patience=config['early_stop_patience'], verbose=1,
+                          save_filepath=config['output_dir'])
     history_df = save_history(history, config)
     save_history_plots(history_df, config)
 
     result = model.evaluate(val_dataset, verbose=0)
-    save_result(result, 'result', config)
+    save_result(result, 'result_best', config)
+
+    model.load_weights(model.last_epoch_filepath)
+    result = model.evaluate(val_dataset, verbose=0)
+    save_result(result, 'result_last', config)
 
     if config['model'] != 'Baseline':
-        model.reload(is_mc_dropout=True)
+        model.reload(is_mc_dropout=True, filepath=model.best_model_filepath)
         runs = [5, 25, 100]
         for run in runs:
             result = model.mc_evaluate(val_dataset, run)
-            save_result(result, f'result_{run}', config)
+            save_result(result, f'result_best_{run}', config)
+
+        model.reload(is_mc_dropout=True, filepath=model.last_epoch_filepath)
+        runs = [5, 25, 100]
+        for run in runs:
+            result = model.mc_evaluate(val_dataset, run)
+            save_result(result, f'result_last_{run}', config)
 
 
 def worker(config_index):
@@ -239,7 +251,11 @@ def worker(config_index):
     config['data']['test_indices'] = splits[config['data']['train_size']][config['run']][1]
     save_config(config)
 
-    run_experiment(config)
+    try:
+        run_experiment(config)
+    except Exception as e:
+        send_log_tg(str(e))
+        traceback.print_exc()
 
 
 def p_norm(matrix, p=4):
@@ -252,11 +268,11 @@ with open('configs_baseline.json', 'r') as f:
 n_runs = 5
 
 splits = {
-    100: iterative_split(n_runs, train_size=100, test_size=100, random_state=42),
-    250: iterative_split(n_runs, train_size=250, test_size=100, random_state=43),
-    500: iterative_split(n_runs, train_size=500, test_size=100, random_state=44),
-    750: iterative_split(n_runs, train_size=750, test_size=100, random_state=45),
-    900: iterative_split(n_runs, train_size=900, test_size=100, random_state=46)
+    100: iterative_split(n_runs, train_size=100, test_size=100, seed=42),
+    250: iterative_split(n_runs, train_size=250, test_size=100, seed=43),
+    500: iterative_split(n_runs, train_size=500, test_size=100, seed=44),
+    750: iterative_split(n_runs, train_size=750, test_size=100, seed=45),
+    900: iterative_split(n_runs, train_size=900, test_size=100, seed=46)
 }
 
 
