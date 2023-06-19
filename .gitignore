@@ -167,3 +167,4 @@ data/*
 Austausch_IPD_Optimierung/*
 src/utils/send_logs.py
 experiments/*
+configs*
