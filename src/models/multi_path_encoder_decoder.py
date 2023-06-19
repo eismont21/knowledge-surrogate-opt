@@ -6,7 +6,7 @@ from src.layers.concrete_dropout import ConcreteDenseDropout, ConcreteSpatialDro
     get_dropout_regularizer
 
 
-class MultiPathEncoderDecoder(Model):
+class MultiPathEncoderDecoderDropout(Model):
     def __init__(self, name: str, input_dim, output_dim, x_train, base_filters: int = 64,
                  activation: str = 'relu', initializer=tf.keras.initializers.GlorotUniform(),
                  hidden_neurons: int = 500, positional_encoding: int = 0, is_mc_dropout: bool = False):
