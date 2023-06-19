@@ -6,6 +6,7 @@ import numpy as np
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
 
 class Model(ABC):
@@ -95,7 +96,7 @@ class Model(ABC):
     def predict(self, x, verbose: int = 0):
         return self.model.predict(x, verbose=verbose)
 
-    def mc_predict(self, dataset, mc_iterations: int, mean: bool = True):
+    def mc_predict(self, dataset, mc_iterations: int, mean: bool = True, batch_size: int = 8):
         is_multi_path = isinstance(dataset.element_spec[0], tuple)
         if is_multi_path:
             x_images_values = []
@@ -114,10 +115,14 @@ class Model(ABC):
         x_np = np.concatenate(x_values, axis=0)
         y_np = np.concatenate(y_values, axis=0)
 
-        if is_multi_path:
-            mc_predictions = np.stack([self.predict((x_images_np, x_np)) for _ in range(mc_iterations)], axis=0)
-        else:
-            mc_predictions = np.stack([self.predict(x_np) for _ in range(mc_iterations)], axis=0)
+        mc_predictions = np.zeros((mc_iterations, *y_np.shape))
+
+        for i in range(mc_iterations):
+            for j in range(0, len(x_np), batch_size):
+                batch = (x_images_np[j:j + batch_size], x_np[j:j + batch_size]) \
+                    if is_multi_path else x_np[j:j + batch_size]
+                preds = self.predict(batch)
+                mc_predictions[i, j:j + len(preds)] = preds
 
         if mean:
             mc_predictions = mc_predictions.mean(axis=0)
