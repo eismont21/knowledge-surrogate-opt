@@ -1,5 +1,6 @@
 import itertools
 import json
+import random
 
 
 def main():
@@ -53,6 +54,7 @@ def main():
             }
             configs.append(config)
 
+    random.shuffle(configs)
     configs = sorted(configs, key=lambda x: x['run'])
     with open('configs.json', 'w') as f:
         json.dump(configs, f)
