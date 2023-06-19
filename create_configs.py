@@ -22,27 +22,23 @@ def main():
                 'optimizer': 'adam',
                 'encoding': 'none',
                 'positional_encoding': 0,
-                'epochs': 200,
-                'early_stop_patience': 40,
+                'epochs': 300,
+                'early_stop_patience': 60,
             }
             configs.append(config)
-
-    configs = sorted(configs, key=lambda x: x['run'])
-    with open('configs_baseline.json', 'w') as f:
-        json.dump(configs, f)
 
     models = ['UNet', 'EncoderDecoder', 'EncoderDecoderDropout']
     encodings = ['deepinsight', 'domain', 'domain_lengths', 'naive', 'multipath']
 
     parameters_product = itertools.product(train_sizes, models, encodings)
 
-    configs = []
-
     for train_size, model, encoding in parameters_product:
         if encoding == 'multipath':
             data_type = 'vector_images'
         else:
             data_type = 'images'
+        if model == 'EncoderDecoder' and encoding == 'multipath':
+            continue
         for i in range(n_runs):
             config = {
                 'run': i,
@@ -52,13 +48,13 @@ def main():
                 'optimizer': 'adam',
                 'encoding': encoding,
                 'positional_encoding': 0,
-                'epochs': 200,
-                'early_stop_patience': 40,
+                'epochs': 300,
+                'early_stop_patience': 60,
             }
             configs.append(config)
 
     configs = sorted(configs, key=lambda x: x['run'])
-    with open('configs_cnn.json', 'w') as f:
+    with open('configs.json', 'w') as f:
         json.dump(configs, f)
 
 if __name__ == "__main__":

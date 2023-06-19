@@ -12,7 +12,7 @@ from multiprocessing import Pool
 from tqdm import tqdm
 import traceback
 from src.models import DenseModel, DenseModelDropout, UNet, MultiPathUNet, EncoderDecoder, \
-    MultiPathEncoderDecoder
+    MultiPathEncoderDecoderDropout, EncoderDecoderDropout
 from src.dataloaders import BaselineDataLoader, ImagesDataLoader, VectorImagesDataLoader
 from src.loss_functions import SSIMLoss, TotalLoss, WeightedLoss
 from src.metrics import SSIMLossMetric, TotalLossMetric, WeightedLossMetric, MAE, RMSE
@@ -31,7 +31,7 @@ def iterative_split(iterations, train_size=None, test_size=None, train_ratio=Non
     indices_all = list(x.index)
     np.random.shuffle(indices_all)
 
-    splits = []
+    splits_list = []
 
     for _ in range(iterations):
         indices_train_sorted = sorted(indices_all, key=lambda x: freq_map_train[x])
@@ -44,9 +44,9 @@ def iterative_split(iterations, train_size=None, test_size=None, train_ratio=Non
         for idx in test_indices:
             freq_map_test[idx] += 1
 
-        splits.append((train_indices, test_indices))
+        splits_list.append((train_indices, test_indices))
 
-    return splits
+    return splits_list
 
 
 def get_data_loader(config):
@@ -88,22 +88,29 @@ def get_model(config, train_dataset, x_train):
                          encoding=config['encoding'],
                          positional_encoding=config['positional_encoding'],
                          x_train=x_train)
-    elif config['model']['type'] == 'EncoderDecoder':
+    elif config['model'] == 'EncoderDecoder':
+        model = EncoderDecoder(name='EncoderDecoder',
+                               input_dim=train_dataset.element_spec[0].shape[1:],
+                               output_dim=train_dataset.element_spec[1].shape[1:],
+                               encoding=config['encoding'],
+                               positional_encoding=config['positional_encoding'],
+                               x_train=x_train)
+    elif config['model'] == 'EncoderDecoderDropout':
         if config['encoding'] == 'multipath':
-            model = MultiPathEncoderDecoder(name='MultiPathEncoderDecoder',
-                                            input_dim=(
-                                                train_dataset.element_spec[0][0].shape[1:],
-                                                train_dataset.element_spec[0][1].shape[1:]),
-                                            output_dim=train_dataset.element_spec[1].shape[1:],
-                                            positional_encoding=config['positional_encoding'],
-                                            x_train=x_train)
+            model = MultiPathEncoderDecoderDropout(name='MultiPathEncoderDecoderDropout',
+                                                   input_dim=(
+                                                       train_dataset.element_spec[0][0].shape[1:],
+                                                       train_dataset.element_spec[0][1].shape[1:]),
+                                                   output_dim=train_dataset.element_spec[1].shape[1:],
+                                                   positional_encoding=config['positional_encoding'],
+                                                   x_train=x_train)
         else:
-            model = EncoderDecoder(name='EncoderDecoder',
-                                   input_dim=train_dataset.element_spec[0].shape[1:],
-                                   output_dim=train_dataset.element_spec[1].shape[1:],
-                                   encoding=config['encoding'],
-                                   positional_encoding=config['positional_encoding'],
-                                   x_train=x_train)
+            model = EncoderDecoderDropout(name='EncoderDecoderDropout',
+                                          input_dim=train_dataset.element_spec[0].shape[1:],
+                                          output_dim=train_dataset.element_spec[1].shape[1:],
+                                          encoding=config['encoding'],
+                                          positional_encoding=config['positional_encoding'],
+                                          x_train=x_train)
     else:
         raise ValueError(f"Unknown model type: {config['model']['type']}")
 
@@ -220,7 +227,7 @@ def run_experiment(config):
     result = model.evaluate(val_dataset, verbose=0)
     save_result(result, 'result_last', config)
 
-    if config['model'] != 'Baseline':
+    if config['model'] not in ['Baseline', 'EncoderDecoder']:
         model.reload(is_mc_dropout=True, filepath=model.best_model_filepath)
         runs = [5, 25, 100]
         for run in runs:
@@ -255,6 +262,7 @@ def worker(config_index):
         run_experiment(config)
     except Exception as e:
         send_log_tg(str(e))
+        send_log_tg(str(config))
         traceback.print_exc()
 
 
@@ -262,7 +270,7 @@ def p_norm(matrix, p=4):
     return tf.norm(matrix, ord=p)
 
 
-with open('configs_baseline.json', 'r') as f:
+with open('configs.json', 'r') as f:
     configs = json.load(f)
 
 n_runs = 5
