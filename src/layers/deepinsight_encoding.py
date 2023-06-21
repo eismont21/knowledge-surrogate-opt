@@ -28,7 +28,7 @@ class DeepInsightEncoding(tf.keras.layers.Layer):
             metric=distance_metric,
             init='random',
             learning_rate='auto',
-            n_jobs=-1
+            n_jobs=1
         )
         pixel_size = self.stamp_shape_matrix_shape[:-1]
         it = ImageTransformer(
