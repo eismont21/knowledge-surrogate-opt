@@ -77,11 +77,11 @@ class ImageTransformer:
         if isinstance(feature_extractor, str):
             fe = feature_extractor.casefold()
             if fe == 'tsne'.casefold():
-                fe_func = TSNE(n_components=2, metric='cosine')
+                fe_func = TSNE(n_components=2, metric='cosine', n_jobs=1)
             elif fe == 'pca'.casefold():
                 fe_func = PCA(n_components=2)
             elif fe == 'kpca'.casefold():
-                fe_func = KernelPCA(n_components=2, kernel='rbf')
+                fe_func = KernelPCA(n_components=2, kernel='rbf', n_jobs=1)
             else:
                 raise ValueError(
                     f"feature_extractor '{feature_extractor}' not valid")
