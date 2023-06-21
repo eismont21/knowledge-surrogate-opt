@@ -12,6 +12,7 @@ from multiprocessing import Pool
 from tqdm import tqdm
 import traceback
 import copy
+import glob
 from src.models import DenseModel, DenseModelDropout, UNet, MultiPathUNet, EncoderDecoder, \
     MultiPathEncoderDecoderDropout, EncoderDecoderDropout
 from src.dataloaders import BaselineDataLoader, ImagesDataLoader, VectorImagesDataLoader
@@ -242,6 +243,45 @@ def run_experiment(config):
             save_result(result, f'result_last_{run}', config)
 
 
+def get_finished_experiments():
+    root_dir = "experiments"
+    experiment_dirs = glob.glob(f"{root_dir}/*/")
+    experiments_data = []
+
+    for exp_dir in experiment_dirs:
+        config_file = f"{exp_dir}config.json"
+        result_file = f"{exp_dir}result_best.json"
+        if not glob.glob(config_file) or not glob.glob(result_file):
+            continue
+        with open(config_file, 'r') as f:
+            config_data = json.load(f)
+        experiments_data.append(config_data)
+
+    return experiments_data
+
+
+def get_remaining_experiments(configs_list):
+    def are_dicts_equal(dict1, dict2, keys_to_check):
+        for key in keys_to_check:
+            if isinstance(dict1.get(key), dict) and isinstance(dict2.get(key), dict):
+                if not are_dicts_equal(dict1.get(key), dict2.get(key), dict1.get(key).keys()):
+                    return False
+            elif dict1.get(key) != dict2.get(key):
+                return False
+        return True
+
+    finished_experiments = get_finished_experiments()
+    remaining_configs = []
+    initial_keys = list(configs_list[0].keys())
+
+    for config in configs_list:
+        is_config_finished = any(are_dicts_equal(config, exp, initial_keys) for exp in finished_experiments)
+        if not is_config_finished:
+            remaining_configs.append(config)
+
+    return remaining_configs
+
+
 def worker(config_index):
     gpu_id = config_index % 4
     os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
@@ -273,6 +313,8 @@ def p_norm(matrix, p=4):
 
 with open('configs.json', 'r') as f:
     configs = json.load(f)
+
+configs = get_remaining_experiments(configs)
 
 n_runs = 5
 
