@@ -11,6 +11,7 @@ import time
 from multiprocessing import Pool
 from tqdm import tqdm
 import traceback
+import copy
 from src.models import DenseModel, DenseModelDropout, UNet, MultiPathUNet, EncoderDecoder, \
     MultiPathEncoderDecoderDropout, EncoderDecoderDropout
 from src.dataloaders import BaselineDataLoader, ImagesDataLoader, VectorImagesDataLoader
@@ -261,8 +262,8 @@ def worker(config_index):
     try:
         run_experiment(config)
     except Exception as e:
-        send_log_tg(str(e))
-        send_log_tg(str(config))
+        failed_configs.append(config)
+        send_log_tg(str(e) + '\n\n' + str(config) + '\n\n' + 'Failed configs: ' + str(len(failed_configs)))
         traceback.print_exc()
 
 
@@ -285,9 +286,18 @@ splits = {
 
 
 def main():
+    global failed_configs
+    failed_configs = []
+
     with Pool(4) as p:
         for _ in tqdm(p.imap(worker, range(len(configs))), total=len(configs)):
             pass
+
+        while len(failed_configs) != 0:
+            failed_configs_rerun = copy.deepcopy(failed_configs)
+            failed_configs = []
+            for _ in tqdm(p.imap(worker, range(len(failed_configs_rerun))), total=len(failed_configs_rerun)):
+                pass
 
 
 if __name__ == "__main__":
