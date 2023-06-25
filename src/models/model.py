@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+# os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
 
 class Model(ABC):
@@ -139,5 +139,6 @@ class Model(ABC):
         for metric in self.metrics:
             metric_value = metric(y_true, y_pred).numpy()
             metrics_values[metric.name] = np.float64(metric_value)
+            metric.reset_states()
 
         return metrics_values
