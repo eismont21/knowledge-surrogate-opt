@@ -9,13 +9,14 @@ from src.layers.concrete_dropout import ConcreteDenseDropout, ConcreteSpatialDro
 class MultiPathUNet(Model):
     def __init__(self, name: str, input_dim, output_dim, x_train, base_filters: int = 64,
                  activation: str = 'relu', initializer: str = 'he_normal', hidden_neurons: int = 500,
-                 positional_encoding: int = 0, is_mc_dropout: bool = False):
+                 positional_encoding: int = 0, is_mc_dropout: bool = False, upsampling_interpolation: str = 'nearest'):
         self.input_matrix_dim, self.input_vector_dim = input_dim
         self.base_filters = base_filters
         self.initializer = initializer
         self.activation = activation
         self.hidden_neurons = hidden_neurons
         self.positional_encoding = positional_encoding
+        self.upsampling_interpolation = upsampling_interpolation
         self.x_train = x_train
         self.wr = get_weight_regularizer(self.x_train.shape[0], l=1e-2, tau=1.0)
         self.dr = get_dropout_regularizer(self.x_train.shape[0], tau=1.0)
@@ -108,7 +109,8 @@ class MultiPathUNet(Model):
                                                    padding='same')
         u7 = ConcreteSpatialDropout2D(u7_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                       is_mc_dropout=self.is_mc_dropout)(c6)
-        c3_resized = tf.keras.layers.Resizing(u7.shape[1], u7.shape[2])(c3)
+        c3_resized = tf.keras.layers.Resizing(u7.shape[1], u7.shape[2], interpolation=self.upsampling_interpolation,
+                                              crop_to_aspect_ratio=False)(c3)
         u7 = tf.keras.layers.concatenate([u7, c3_resized], axis=3)
         c7 = tf.keras.layers.Conv2D(filters=self.base_filters * 4, kernel_size=(3, 3), activation=self.activation,
                                     kernel_initializer=self.initializer, padding='same')(u7)
@@ -121,7 +123,8 @@ class MultiPathUNet(Model):
                                                    padding='same')
         u8 = ConcreteSpatialDropout2D(u8_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                       is_mc_dropout=self.is_mc_dropout)(c7)
-        c2_resized = tf.keras.layers.Resizing(u8.shape[1], u8.shape[2])(c2)
+        c2_resized = tf.keras.layers.Resizing(u8.shape[1], u8.shape[2], interpolation=self.upsampling_interpolation,
+                                              crop_to_aspect_ratio=False)(c2)
         u8 = tf.keras.layers.concatenate([u8, c2_resized], axis=3)
         c8 = tf.keras.layers.Conv2D(filters=self.base_filters * 2, kernel_size=(3, 3), activation=self.activation,
                                     kernel_initializer=self.initializer, padding='same')(u8)
