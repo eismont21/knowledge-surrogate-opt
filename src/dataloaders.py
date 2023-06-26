@@ -69,7 +69,7 @@ class BaselineDataLoader(DataLoader):
         dataset = tf.data.Dataset.from_tensor_slices((x_scaled.values.astype(np.float32),
                                                       y_scaled.values.astype(np.float32)))
         if shuffle:
-            dataset = dataset.shuffle(buffer_size=1000, reshuffle_each_iteration=True)
+            dataset = dataset.shuffle(buffer_size=len(y), reshuffle_each_iteration=True)
         dataset = dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
         return dataset
 
@@ -96,7 +96,7 @@ class ImagesDataLoader(DataLoader):
 
         dataset = tf.data.Dataset.from_tensor_slices((x_scaled.values.astype(np.float32), y_scaled_arrays))
         if shuffle:
-            dataset = dataset.shuffle(buffer_size=1000, reshuffle_each_iteration=True)
+            dataset = dataset.shuffle(buffer_size=len(y), reshuffle_each_iteration=True)
         dataset = dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
         return dataset
 
@@ -134,6 +134,6 @@ class VectorImagesDataLoader(DataLoader):
         dataset = tf.data.Dataset.zip(((x_matrix_ds, x_vector_ds), y_ds))
 
         if shuffle:
-            dataset = dataset.shuffle(buffer_size=1000, reshuffle_each_iteration=True)
+            dataset = dataset.shuffle(buffer_size=len(y), reshuffle_each_iteration=True)
         dataset = dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
         return dataset
