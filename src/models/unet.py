@@ -133,7 +133,7 @@ class UNet(Model):
                                                    padding='same')
         u9 = ConcreteSpatialDropout2D(u9_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                       is_mc_dropout=self.is_mc_dropout)(c8)
-        u9 = tf.keras.layers.concatenate([u9, c1])
+        u9 = tf.keras.layers.concatenate([u9, c1], axis=3)
         c9 = tf.keras.layers.Conv2D(filters=self.base_filters, kernel_size=(3, 3), activation=self.activation,
                                     kernel_initializer=self.initializer, padding='same')(u9)
         c9 = tf.keras.layers.BatchNormalization()(c9)
