@@ -6,7 +6,9 @@ import numpy as np
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-#os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+
+
+# os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
 
 class Model(ABC):
@@ -85,8 +87,8 @@ class Model(ABC):
     def load_weights(self, filepath: str):
         self.model.load_weights(filepath)
 
-    def evaluate(self, dataset, verbose: int = 0):
-        scores = self.model.evaluate(dataset, verbose=verbose)
+    def evaluate(self, dataset, batch_size: int = 8, verbose: int = 0):
+        scores = self.model.evaluate(dataset, batch_size=batch_size, verbose=verbose)
         metrics_values = {}
         for i, metric in enumerate(self.metrics):
             metrics_values[metric.name] = scores[i + 1]
@@ -137,7 +139,9 @@ class Model(ABC):
 
         metrics_values = {}
         for metric in self.metrics:
+            metric.reset_states()
             metric_value = metric(y_true, y_pred).numpy()
             metrics_values[metric.name] = np.float64(metric_value)
+            metric.reset_states()
 
         return metrics_values
