@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-# os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+#os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
 
 class Model(ABC):
@@ -93,8 +93,8 @@ class Model(ABC):
 
         return metrics_values
 
-    def predict(self, x, verbose: int = 0):
-        return self.model.predict(x, verbose=verbose)
+    def predict(self, x, batch_size: int = 8, verbose: int = 0):
+        return self.model.predict(x, batch_size=batch_size, verbose=verbose)
 
     def mc_predict(self, dataset, mc_iterations: int, mean: bool = True, batch_size: int = 8):
         is_multi_path = isinstance(dataset.element_spec[0], tuple)
@@ -139,6 +139,5 @@ class Model(ABC):
         for metric in self.metrics:
             metric_value = metric(y_true, y_pred).numpy()
             metrics_values[metric.name] = np.float64(metric_value)
-            metric.reset_states()
 
         return metrics_values
