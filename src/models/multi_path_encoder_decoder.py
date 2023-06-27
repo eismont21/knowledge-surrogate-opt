@@ -90,7 +90,11 @@ class MultiPathEncoderDecoderDropout(Model):
         z = round(math.prod(self.input_matrix_dim) / (p6.shape[1] * p6.shape[2]))
         v = tf.keras.layers.Dense(p6.shape[1] * p6.shape[2] * z, activation=self.activation)(v)
         v_reshaped = tf.keras.layers.Reshape((p6.shape[1], p6.shape[2], z))(v)
-        combined = tf.keras.layers.concatenate([p6, v_reshaped])
+        combined = tf.keras.layers.concatenate([p6, v_reshaped], axis=3)
+        combined = tf.keras.layers.Conv2D(filters=self.base_filters * 8, kernel_size=(3, 3),
+                                          activation=self.activation, kernel_initializer=self.initializer,
+                                          padding='same')(combined)
+        combined = tf.keras.layers.BatchNormalization()(combined)
 
         u1 = tf.keras.layers.Resizing(c6.shape[1], c6.shape[2], interpolation=self.upsampling_interpolation,
                                       crop_to_aspect_ratio=False)(combined)
