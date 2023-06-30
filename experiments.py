@@ -10,11 +10,11 @@ import json
 import time
 from multiprocessing import Pool
 from tqdm import tqdm
-import traceback
-import copy
+from datetime import datetime
 import glob
+import gc
 from src.models import DenseModel, DenseModelDropout, UNet, MultiPathUNet, EncoderDecoder, \
-    MultiPathEncoderDecoderDropout, EncoderDecoderDropout
+    MultiPathEncoderDecoderDropout, EncoderDecoderDropout, CFPNetM, MultiPathCFPNetM
 from src.dataloaders import BaselineDataLoader, ImagesDataLoader, VectorImagesDataLoader
 from src.loss_functions import SSIMLoss, TotalLoss, WeightedLoss
 from src.metrics import SSIMLossMetric, TotalLossMetric, WeightedLossMetric, MAE, RMSE
@@ -113,6 +113,22 @@ def get_model(config, train_dataset, x_train):
                                           encoding=config['encoding'],
                                           positional_encoding=config['positional_encoding'],
                                           x_train=x_train)
+    elif config['model'] == 'CFPNetM':
+        if config['encoding'] == 'multipath':
+            model = MultiPathCFPNetM(name='MultiPathCFPNetM',
+                                     input_dim=(
+                                         train_dataset.element_spec[0][0].shape[1:],
+                                         train_dataset.element_spec[0][1].shape[1:]),
+                                     output_dim=train_dataset.element_spec[1].shape[1:],
+                                     positional_encoding=config['positional_encoding'],
+                                     x_train=x_train)
+        else:
+            model = CFPNetM(name='CFPNetM',
+                            input_dim=train_dataset.element_spec[0].shape[1:],
+                            output_dim=train_dataset.element_spec[1].shape[1:],
+                            encoding=config['encoding'],
+                            positional_encoding=config['positional_encoding'],
+                            x_train=x_train)
     else:
         raise ValueError(f"Unknown model type: {config['model']['type']}")
 
@@ -176,7 +192,7 @@ def save_history_plots(history_df, config):
         plt.xlabel('Epoch')
         plt.ylabel(name.title())
         plt.legend()
-        plt.savefig(os.path.join(metrics_dir, f'{metric.lower()}.png'))
+        plt.savefig(os.path.join(metrics_dir, f'{metric.lower()}.png'), bbox_inches='tight', pad_inches=0.1)
         plt.close()
 
     if len(dropout_metrics) != 0:
@@ -188,7 +204,7 @@ def save_history_plots(history_df, config):
         plt.ylabel('Dropout Rate')
         plt.legend()
         plt.title('Concrete Dropout')
-        plt.savefig(os.path.join(metrics_dir, 'dropouts.png'))
+        plt.savefig(os.path.join(metrics_dir, 'dropouts.png'), bbox_inches='tight', pad_inches=0.1)
         plt.close()
 
 
@@ -261,8 +277,8 @@ def get_finished_experiments():
 
 
 def get_remaining_experiments(configs_list):
-    def are_dicts_equal(dict1, dict2, keys_to_check):
-        for key in keys_to_check:
+    def are_dicts_equal(dict1, dict2):
+        for key in list(dict1.keys()):
             if isinstance(dict1.get(key), dict) and isinstance(dict2.get(key), dict):
                 if not are_dicts_equal(dict1.get(key), dict2.get(key), dict1.get(key).keys()):
                     return False
@@ -272,10 +288,9 @@ def get_remaining_experiments(configs_list):
 
     finished_experiments = get_finished_experiments()
     remaining_configs = []
-    initial_keys = list(configs_list[0].keys())
 
     for config in configs_list:
-        is_config_finished = any(are_dicts_equal(config, exp, initial_keys) for exp in finished_experiments)
+        is_config_finished = any(are_dicts_equal(config, exp) for exp in finished_experiments)
         if not is_config_finished:
             remaining_configs.append(config)
 
@@ -283,6 +298,7 @@ def get_remaining_experiments(configs_list):
 
 
 def worker(config_index):
+    gc.collect()
     gpu_id = config_index % 4
     os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
 
@@ -294,17 +310,20 @@ def worker(config_index):
             os.makedirs(config['output_dir'])
             break
         else:
-            time.sleep(random.randint(1, 10))
+            time.sleep(random.randint(5, 30))
     config['data']['train_indices'] = splits[config['data']['train_size']][config['run']][0]
     config['data']['test_indices'] = splits[config['data']['train_size']][config['run']][1]
     save_config(config)
 
     try:
+        start_time = datetime.now()
         run_experiment(config)
+        config['experiment_time'] = datetime.now() - start_time
+        save_config(config)
     except Exception as e:
         failed_configs.append(config)
         send_log_tg(str(e) + '\n\n' + str(config) + '\n\n' + 'Failed configs: ' + str(len(failed_configs)))
-        traceback.print_exc()
+        # traceback.print_exc()
 
 
 def p_norm(matrix, p=4):
@@ -326,20 +345,13 @@ splits = {
     900: iterative_split(n_runs, train_size=900, test_size=100, seed=46)
 }
 
+failed_configs = []
+
 
 def main():
-    global failed_configs
-    failed_configs = []
-
     with Pool(4) as p:
         for _ in tqdm(p.imap(worker, range(len(configs))), total=len(configs)):
             pass
-
-        while len(failed_configs) != 0:
-            failed_configs_rerun = copy.deepcopy(failed_configs)
-            failed_configs = []
-            for _ in tqdm(p.imap(worker, range(len(failed_configs_rerun))), total=len(failed_configs_rerun)):
-                pass
 
 
 if __name__ == "__main__":
