@@ -8,7 +8,9 @@ import matplotlib.pyplot as plt
 import os
 import json
 import time
-from multiprocessing import Pool
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Manager
+import concurrent.futures
 from tqdm import tqdm
 from datetime import datetime
 import glob
@@ -280,7 +282,7 @@ def get_remaining_experiments(configs_list):
     def are_dicts_equal(dict1, dict2):
         for key in list(dict1.keys()):
             if isinstance(dict1.get(key), dict) and isinstance(dict2.get(key), dict):
-                if not are_dicts_equal(dict1.get(key), dict2.get(key), dict1.get(key).keys()):
+                if not are_dicts_equal(dict1.get(key), dict2.get(key)):
                     return False
             elif dict1.get(key) != dict2.get(key):
                 return False
@@ -297,12 +299,13 @@ def get_remaining_experiments(configs_list):
     return remaining_configs
 
 
-def worker(config_index):
+def worker(config, gpu_queue):
     gc.collect()
-    gpu_id = config_index % 4
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
 
-    config = configs[config_index]
+    gpu_id = gpu_queue.get()
+    os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
+    config['gpu_id'] = gpu_id
+
     while True:
         dir_name = time.strftime('%d-%m-%Y_%H-%M-%S')
         config['output_dir'] = os.path.join('experiments', dir_name)
@@ -310,7 +313,7 @@ def worker(config_index):
             os.makedirs(config['output_dir'])
             break
         else:
-            time.sleep(random.randint(5, 30))
+            time.sleep(random.randint(5, 10))
     config['data']['train_indices'] = splits[config['data']['train_size']][config['run']][0]
     config['data']['test_indices'] = splits[config['data']['train_size']][config['run']][1]
     save_config(config)
@@ -318,12 +321,14 @@ def worker(config_index):
     try:
         start_time = datetime.now()
         run_experiment(config)
-        config['experiment_time'] = datetime.now() - start_time
+        config['experiment_time'] = str(datetime.now() - start_time)
         save_config(config)
     except Exception as e:
         failed_configs.append(config)
         send_log_tg(str(e) + '\n\n' + str(config) + '\n\n' + 'Failed configs: ' + str(len(failed_configs)))
         # traceback.print_exc()
+
+    gpu_queue.put(gpu_id)
 
 
 def p_norm(matrix, p=4):
@@ -347,11 +352,20 @@ splits = {
 
 failed_configs = []
 
+gpus = ["0", "1", "2", "3"]
+
 
 def main():
-    with Pool(4) as p:
-        for _ in tqdm(p.imap(worker, range(len(configs))), total=len(configs)):
-            pass
+    with Manager() as manager:
+        gpu_queue = manager.Queue()
+        for gpu_id in gpus:
+            gpu_queue.put(gpu_id)
+
+        with ProcessPoolExecutor(max_workers=len(gpus)) as executor:
+            futures = [executor.submit(worker, config, gpu_queue) for config in configs]
+
+            for _ in tqdm(concurrent.futures.as_completed(futures), total=len(configs)):
+                pass
 
 
 if __name__ == "__main__":
