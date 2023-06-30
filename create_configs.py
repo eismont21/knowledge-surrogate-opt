@@ -28,7 +28,7 @@ def main():
             }
             configs.append(config)
 
-    models = ['UNet', 'EncoderDecoder', 'EncoderDecoderDropout']
+    models = ['UNet', 'EncoderDecoder', 'EncoderDecoderDropout', 'CFPNetM']
     encodings = ['deepinsight', 'domain', 'domain_lengths', 'naive', 'multipath']
 
     parameters_product = itertools.product(train_sizes, models, encodings)
@@ -58,6 +58,7 @@ def main():
     configs = sorted(configs, key=lambda x: x['run'])
     with open('configs.json', 'w') as f:
         json.dump(configs, f)
+
 
 if __name__ == "__main__":
     main()
