@@ -23,8 +23,7 @@ from src.metrics import SSIMLossMetric, TotalLossMetric, WeightedLossMetric, MAE
 from src.utils.send_logs import send_log_tg
 
 
-def iterative_split(iterations, train_size=None, test_size=None, train_ratio=None,
-                    test_ratio=None, seed=42):
+def iterative_split(iterations, train_size=None, test_size=None, seed=42):
     data_loader = BaselineDataLoader('data/train_short.csv')
     x, _ = data_loader.load_data()
 
@@ -38,15 +37,16 @@ def iterative_split(iterations, train_size=None, test_size=None, train_ratio=Non
     splits_list = []
 
     for _ in range(iterations):
-        indices_train_sorted = sorted(indices_all, key=lambda x: freq_map_train[x])
-        train_indices = indices_train_sorted[:train_size]
-        for idx in train_indices:
-            freq_map_train[idx] += 1
-
-        indices_test_sorted = sorted([i for i in indices_all if i not in train_indices], key=lambda x: freq_map_test[x])
+        indices_test_sorted = sorted(indices_all, key=lambda x: freq_map_test[x])
         test_indices = indices_test_sorted[:test_size]
         for idx in test_indices:
             freq_map_test[idx] += 1
+
+        indices_train_sorted = sorted([i for i in indices_all if i not in test_indices],
+                                      key=lambda x: freq_map_train[x])
+        train_indices = indices_train_sorted[:train_size]
+        for idx in train_indices:
+            freq_map_train[idx] += 1
 
         splits_list.append((train_indices, test_indices))
 
@@ -343,11 +343,11 @@ configs = get_remaining_experiments(configs)
 n_runs = 5
 
 splits = {
-    100: iterative_split(n_runs, train_size=100, test_size=100, seed=42),
-    250: iterative_split(n_runs, train_size=250, test_size=100, seed=43),
-    500: iterative_split(n_runs, train_size=500, test_size=100, seed=44),
-    750: iterative_split(n_runs, train_size=750, test_size=100, seed=45),
-    900: iterative_split(n_runs, train_size=900, test_size=100, seed=46)
+    100: iterative_split(n_runs, train_size=100, test_size=100),
+    250: iterative_split(n_runs, train_size=250, test_size=100),
+    500: iterative_split(n_runs, train_size=500, test_size=100),
+    750: iterative_split(n_runs, train_size=750, test_size=100),
+    900: iterative_split(n_runs, train_size=900, test_size=100)
 }
 
 failed_configs = []

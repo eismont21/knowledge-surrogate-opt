@@ -14,12 +14,13 @@ class DomainEncoding(tf.keras.layers.Layer):
         self.stamp_shape_matrix_path = stamp_shape_matrix_path
         stamp_shape_matrix = np.load(self.stamp_shape_matrix_path)
         stamp_shape_matrix = np.expand_dims(stamp_shape_matrix, axis=-1)
+        scaler = Scaler()
+        stamp_shape_matrix = scaler.scale(stamp_shape_matrix, col_name="stamp_shape_matrix")
         self.stamp_shape_matrix = tf.convert_to_tensor(stamp_shape_matrix, dtype=tf.float32)
         self.encodings_path = encodings_path
         self.use_lengths = use_lengths
         if self.use_lengths:
-            scaler = Scaler()
-            self.lenghts = scaler.scale(pd.read_csv(lengths_path).to_numpy(), 'length')
+            self.lenghts = scaler.scale(pd.read_csv(lengths_path).to_numpy(), col_name="length")
 
     def build(self, input_shape):
         self.input_dim = input_shape[-1]

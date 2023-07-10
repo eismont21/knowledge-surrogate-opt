@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from src.constants import STAMP_SHAPE_MATRIX_PATH
+from src.scaler import Scaler
 
 
 class NaiveEncoding(tf.keras.layers.Layer):
@@ -10,6 +11,8 @@ class NaiveEncoding(tf.keras.layers.Layer):
         self.stamp_shape_matrix_path = stamp_shape_matrix_path
         stamp_shape_matrix = np.load(self.stamp_shape_matrix_path)
         stamp_shape_matrix = np.expand_dims(stamp_shape_matrix, axis=-1)
+        scaler = Scaler()
+        stamp_shape_matrix = scaler.scale(stamp_shape_matrix, col_name="stamp_shape_matrix")
         self.stamp_shape_matrix = tf.convert_to_tensor(stamp_shape_matrix, dtype=tf.float32)
 
     def build(self, input_shape):
