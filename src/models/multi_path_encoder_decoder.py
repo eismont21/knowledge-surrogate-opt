@@ -8,7 +8,7 @@ from src.layers.concrete_dropout import ConcreteDenseDropout, ConcreteSpatialDro
 
 class MultiPathEncoderDecoderDropout(Model):
     def __init__(self, name: str, input_dim, output_dim, x_train, base_filters: int = 64,
-                 activation: str = 'relu', initializer=tf.keras.initializers.GlorotUniform(),
+                 activation: str = 'relu', initializer: str = 'glorot_uniform',
                  hidden_neurons: int = 500, positional_encoding: int = 0, is_mc_dropout: bool = False,
                  upsampling_interpolation: str = 'nearest'):
         self.input_matrix_dim, self.input_vector_dim = input_dim
@@ -34,13 +34,15 @@ class MultiPathEncoderDecoderDropout(Model):
             c0 = PositionalEncoding2()(c0)
 
         c1 = tf.keras.layers.Conv2D(filters=self.base_filters, kernel_size=(15, 15), strides=(1, 1),
-                                    activation=self.activation, kernel_initializer=self.initializer,
+                                    activation=self.activation,
+                                    kernel_initializer=tf.keras.initializers.GlorotUniform(),
                                     padding='same')(c0)
         c1 = tf.keras.layers.BatchNormalization()(c1)
         p1 = tf.keras.layers.MaxPooling2D((2, 2))(c1)
 
         c2_layer = tf.keras.layers.Conv2D(filters=self.base_filters * 2, kernel_size=(7, 7), strides=(1, 1),
-                                          activation=self.activation, kernel_initializer=self.initializer,
+                                          activation=self.activation,
+                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
                                           padding='same')
         c2 = ConcreteSpatialDropout2D(c2_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                       is_mc_dropout=self.is_mc_dropout)(p1)
@@ -48,7 +50,8 @@ class MultiPathEncoderDecoderDropout(Model):
         p2 = tf.keras.layers.MaxPooling2D((2, 2))(c2)
 
         c3_layer = tf.keras.layers.Conv2D(filters=self.base_filters * 4, kernel_size=(5, 5), strides=(1, 1),
-                                          activation=self.activation, kernel_initializer=self.initializer,
+                                          activation=self.activation,
+                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
                                           padding='same')
         c3 = ConcreteSpatialDropout2D(c3_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                       is_mc_dropout=self.is_mc_dropout)(p2)
@@ -56,7 +59,8 @@ class MultiPathEncoderDecoderDropout(Model):
         p3 = tf.keras.layers.MaxPooling2D((2, 2))(c3)
 
         c4_layer = tf.keras.layers.Conv2D(filters=self.base_filters * 8, kernel_size=(5, 5), strides=(1, 1),
-                                          activation=self.activation, kernel_initializer=self.initializer,
+                                          activation=self.activation,
+                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
                                           padding='same')
         c4 = ConcreteSpatialDropout2D(c4_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                       is_mc_dropout=self.is_mc_dropout)(p3)
@@ -64,7 +68,8 @@ class MultiPathEncoderDecoderDropout(Model):
         p4 = tf.keras.layers.MaxPooling2D((2, 2))(c4)
 
         c5_layer = tf.keras.layers.Conv2D(filters=self.base_filters * 8, kernel_size=(3, 3), strides=(1, 1),
-                                          activation=self.activation, kernel_initializer=self.initializer,
+                                          activation=self.activation,
+                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
                                           padding='same')
         c5 = ConcreteSpatialDropout2D(c5_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                       is_mc_dropout=self.is_mc_dropout)(p4)
@@ -72,7 +77,8 @@ class MultiPathEncoderDecoderDropout(Model):
         p5 = tf.keras.layers.MaxPooling2D((2, 2))(c5)
 
         c6_layer = tf.keras.layers.Conv2D(filters=self.base_filters * 8, kernel_size=(2, 2), strides=(1, 1),
-                                          activation=self.activation, kernel_initializer=self.initializer,
+                                          activation=self.activation,
+                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
                                           padding='same')
         c6 = ConcreteSpatialDropout2D(c6_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                       is_mc_dropout=self.is_mc_dropout)(p5)
@@ -92,14 +98,16 @@ class MultiPathEncoderDecoderDropout(Model):
         v_reshaped = tf.keras.layers.Reshape((p6.shape[1], p6.shape[2], z))(v)
         combined = tf.keras.layers.concatenate([p6, v_reshaped], axis=3)
         combined = tf.keras.layers.Conv2D(filters=self.base_filters * 8, kernel_size=(3, 3),
-                                          activation=self.activation, kernel_initializer=self.initializer,
+                                          activation=self.activation,
+                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
                                           padding='same')(combined)
         combined = tf.keras.layers.BatchNormalization()(combined)
 
         u1 = tf.keras.layers.Resizing(c6.shape[1], c6.shape[2], interpolation=self.upsampling_interpolation,
                                       crop_to_aspect_ratio=False)(combined)
         c7_layer = tf.keras.layers.Conv2D(filters=self.base_filters * 16, kernel_size=(2, 2), strides=(1, 1),
-                                          activation=self.activation, kernel_initializer=self.initializer,
+                                          activation=self.activation,
+                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
                                           padding='same')
         c7 = ConcreteSpatialDropout2D(c7_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                       is_mc_dropout=self.is_mc_dropout)(u1)
@@ -108,7 +116,8 @@ class MultiPathEncoderDecoderDropout(Model):
         u2 = tf.keras.layers.Resizing(c5.shape[1], c5.shape[2], interpolation=self.upsampling_interpolation,
                                       crop_to_aspect_ratio=False)(c7)
         c8_layer = tf.keras.layers.Conv2D(filters=self.base_filters * 16, kernel_size=(3, 3), strides=(1, 1),
-                                          activation=self.activation, kernel_initializer=self.initializer,
+                                          activation=self.activation,
+                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
                                           padding='same')
         c8 = ConcreteSpatialDropout2D(c8_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                       is_mc_dropout=self.is_mc_dropout)(u2)
@@ -117,7 +126,8 @@ class MultiPathEncoderDecoderDropout(Model):
         u3 = tf.keras.layers.Resizing(c4.shape[1], c4.shape[2], interpolation=self.upsampling_interpolation,
                                       crop_to_aspect_ratio=False)(c8)
         c9_layer = tf.keras.layers.Conv2D(filters=self.base_filters * 8, kernel_size=(5, 5), strides=(1, 1),
-                                          activation=self.activation, kernel_initializer=self.initializer,
+                                          activation=self.activation,
+                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
                                           padding='same')
         c9 = ConcreteSpatialDropout2D(c9_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                       is_mc_dropout=self.is_mc_dropout)(u3)
@@ -126,7 +136,8 @@ class MultiPathEncoderDecoderDropout(Model):
         u4 = tf.keras.layers.Resizing(c3.shape[1], c3.shape[2], interpolation=self.upsampling_interpolation,
                                       crop_to_aspect_ratio=False)(c9)
         c10_layer = tf.keras.layers.Conv2D(filters=self.base_filters * 4, kernel_size=(5, 5), strides=(1, 1),
-                                           activation=self.activation, kernel_initializer=self.initializer,
+                                           activation=self.activation,
+                                           kernel_initializer=tf.keras.initializers.GlorotUniform(),
                                            padding='same')
         c10 = ConcreteSpatialDropout2D(c10_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                        is_mc_dropout=self.is_mc_dropout)(u4)
@@ -135,7 +146,8 @@ class MultiPathEncoderDecoderDropout(Model):
         u5 = tf.keras.layers.Resizing(c2.shape[1], c2.shape[2], interpolation=self.upsampling_interpolation,
                                       crop_to_aspect_ratio=False)(c10)
         c11_layer = tf.keras.layers.Conv2D(filters=self.base_filters * 2, kernel_size=(7, 7), strides=(1, 1),
-                                           activation=self.activation, kernel_initializer=self.initializer,
+                                           activation=self.activation,
+                                           kernel_initializer=tf.keras.initializers.GlorotUniform(),
                                            padding='same')
         c11 = ConcreteSpatialDropout2D(c11_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                        is_mc_dropout=self.is_mc_dropout)(u5)

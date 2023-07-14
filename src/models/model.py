@@ -5,9 +5,6 @@ from src.optimizers import Lion, AdamW
 import numpy as np
 import os
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-# os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
-
 
 class Model(ABC):
     def __init__(self, name: str, input_dim, output_dim):
