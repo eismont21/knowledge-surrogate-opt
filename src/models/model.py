@@ -6,6 +6,8 @@ import numpy as np
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+
 # os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
 
@@ -22,7 +24,7 @@ class Model(ABC):
         pass
 
     def compile(self, optimizer: str, loss: str, metrics_inverse: bool = True, tolerance: int = 3,
-                loss_metric=None, obj_function=None):
+                loss_metric=None, obj_function=None, lr: float = 1e-3):
         if self.compile_args is None:
             self.compile_args = (optimizer, loss, metrics_inverse, tolerance, loss_metric, obj_function)
 
@@ -47,6 +49,8 @@ class Model(ABC):
             optimizer = Lion()
         elif optimizer == 'adamw':
             optimizer = AdamW()
+        elif optimizer == 'adam':
+            optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
 
         self.model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 

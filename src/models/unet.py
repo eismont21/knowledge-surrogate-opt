@@ -5,24 +5,24 @@ from src.layers.concrete_dropout import ConcreteSpatialDropout2D, get_weight_reg
 
 
 class UNet(Model):
-    def __init__(self, name: str, input_dim: int, output_dim, x_train, base_filters: int = 64,
-                 activation: str = 'relu', initializer: str = 'he_normal',
+    def __init__(self, name: str, input_dim: int, output_dim, train_size: int = 100, base_filters: int = 64,
+                 activation: str = 'relu', initializer: str = 'he_normal', x_train=None,
                  encoding: str = 'naive', positional_encoding: int = 0, is_mc_dropout: bool = False):
         self.base_filters = base_filters
         self.initializer = initializer
         self.activation = activation
         self.encoding = encoding
         self.positional_encoding = positional_encoding
-        self.x_train = x_train
-        self.wr = get_weight_regularizer(self.x_train.shape[0], l=1e-2, tau=1.0)
-        self.dr = get_dropout_regularizer(self.x_train.shape[0], tau=1.0)
+        self.wr = get_weight_regularizer(train_size, l=1e-2, tau=1.0)
+        self.dr = get_dropout_regularizer(train_size, tau=1.0)
         self.is_mc_dropout = is_mc_dropout
+        self.x_train = x_train
         super().__init__(name, input_dim, output_dim)
 
     def build(self):
         input_tensor = tf.keras.layers.Input(self.input_dim)
 
-        if self.encoding == 'deepinsight':
+        if self.encoding == 'deepinsight' and self.x_train is not None:
             custom_input_layer = DeepInsightEncoding(x_train=self.x_train)
         elif self.encoding == 'domain':
             custom_input_layer = DomainEncoding()

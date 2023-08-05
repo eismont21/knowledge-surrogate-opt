@@ -20,12 +20,12 @@ class DenseModel(Model):
 
 
 class DenseModelDropout(Model):
-    def __init__(self, name: str, input_dim, output_dim, x_train, hidden_neurons: int = 500,
+    def __init__(self, name: str, input_dim, output_dim, train_size: int = 100, hidden_neurons: int = 500,
                  activation: str = 'relu', is_mc_dropout: bool = False):
         self.hidden_neurons = hidden_neurons
         self.activation = activation
-        self.wr = get_weight_regularizer(x_train.shape[0], l=1e-2, tau=1.0)
-        self.dr = get_dropout_regularizer(x_train.shape[0], tau=1.0)
+        self.wr = get_weight_regularizer(train_size, l=1e-2, tau=1.0)
+        self.dr = get_dropout_regularizer(train_size, tau=1.0)
         self.is_mc_dropout = is_mc_dropout
         super().__init__(name, input_dim, output_dim)
 
