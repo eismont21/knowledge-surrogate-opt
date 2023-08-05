@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 import tensorflow as tf
 from src.metrics import RMSE, MAE, DifferenceObjectiveFunction, ToleranceAccuracy, DropoutHistory, MultipleEarlyStopping
-from src.optimizers import Lion, AdamW
 import numpy as np
 import os
 
@@ -40,10 +39,10 @@ class Model(ABC):
 
         self.metrics = metrics
 
-        if optimizer == 'lion':
-            optimizer = Lion()
-        elif optimizer == 'adamw':
-            optimizer = AdamW()
+        if optimizer == 'adamw':
+            optimizer = tf.keras.optimizers.AdamW()
+        elif optimizer == 'lion':
+            optimizer = tf.keras.optimizers.Lion()
 
         self.model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
