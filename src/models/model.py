@@ -1,14 +1,8 @@
 from abc import ABC, abstractmethod
 import tensorflow as tf
 from src.metrics import RMSE, MAE, DifferenceObjectiveFunction, ToleranceAccuracy, DropoutHistory, MultipleEarlyStopping
-from src.optimizers import Lion, AdamW
 import numpy as np
 import os
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
-
-# os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
 
 class Model(ABC):
@@ -45,10 +39,10 @@ class Model(ABC):
 
         self.metrics = metrics
 
-        if optimizer == 'lion':
-            optimizer = Lion()
-        elif optimizer == 'adamw':
-            optimizer = AdamW()
+        if optimizer == 'adamw':
+            optimizer = tf.keras.optimizers.AdamW()
+        elif optimizer == 'lion':
+            optimizer = tf.keras.optimizers.Lion()
         elif optimizer == 'adam':
             optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
 
@@ -58,7 +52,6 @@ class Model(ABC):
         self.is_mc_dropout = is_mc_dropout
         self.build()
         self.model.load_weights(filepath)
-        # self.compile(*self.compile_args)
 
     def train(self, train_dataset, val_dataset, epochs: int = 100, verbose: int = 1,
               early_stop_patience: int = 100, save_filepath: str = 'tmp/'):
