@@ -7,7 +7,7 @@ from src.layers.concrete_dropout import ConcreteDenseDropout, ConcreteSpatialDro
 
 
 class MultiPathUNet(Model):
-    def __init__(self, name: str, input_dim, output_dim, x_train, base_filters: int = 64,
+    def __init__(self, name: str, input_dim, output_dim, train_size: int = 100, base_filters: int = 64,
                  activation: str = 'relu', initializer: str = 'he_normal', hidden_neurons: int = 500,
                  positional_encoding: int = 0, is_mc_dropout: bool = False):
         self.input_matrix_dim, self.input_vector_dim = input_dim
@@ -16,9 +16,8 @@ class MultiPathUNet(Model):
         self.activation = activation
         self.hidden_neurons = hidden_neurons
         self.positional_encoding = positional_encoding
-        self.x_train = x_train
-        self.wr = get_weight_regularizer(self.x_train.shape[0], l=1e-2, tau=1.0)
-        self.dr = get_dropout_regularizer(self.x_train.shape[0], tau=1.0)
+        self.wr = get_weight_regularizer(train_size, l=1e-2, tau=1.0)
+        self.dr = get_dropout_regularizer(train_size, tau=1.0)
         self.is_mc_dropout = is_mc_dropout
         super().__init__(name, input_dim, output_dim)
 
