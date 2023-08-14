@@ -11,9 +11,11 @@ class CFPNetM(Model):
     '''
 
     def __init__(self, name: str, input_dim: int, output_dim, train_size: int = 100, base_filters: int = 64,
+                 kernel_size: int = 3,
                  activation: str = 'relu', initializer: str = 'he_normal', x_train=None,
                  encoding: str = 'naive', positional_encoding: int = 0, is_mc_dropout: bool = False):
         self.base_filters = base_filters
+        self.kernel_size = kernel_size
         self.initializer = initializer
         self.activation = activation
         self.encoding = encoding
@@ -24,8 +26,10 @@ class CFPNetM(Model):
         self.x_train = x_train
         super().__init__(name, input_dim, output_dim)
 
-    def conv2d_bn(self, x, filters, kernel_size=(3, 3), d_rate=1, strides=(1, 1), padding='same', activation='relu',
+    def conv2d_bn(self, x, filters, kernel_size=None, d_rate=1, strides=(1, 1), padding='same', activation='relu',
                   groups=1):
+        if kernel_size is None:
+            kernel_size = (self.kernel_size, self.kernel_size)
         x = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, dilation_rate=d_rate,
                                    strides=strides, activation=activation, padding=padding,
                                    kernel_initializer=self.initializer, groups=groups)(x)
