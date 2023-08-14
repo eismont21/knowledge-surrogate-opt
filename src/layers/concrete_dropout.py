@@ -67,6 +67,13 @@ class ConcreteDropout(Wrapper):
                                        dtype=tf.dtypes.float32,
                                        trainable=True)
 
+    def set_regularizers(self, weight_regularizer, dropout_regularizer):
+        self.weight_regularizer = weight_regularizer
+        self.dropout_regularizer = dropout_regularizer
+
+        initial_value = tf.random_uniform_initializer(self.init_min, self.init_max)(shape=(1,))
+        self.p_logit.assign(initial_value)
+
     def _get_noise_shape(self, inputs):
         raise NotImplementedError(
             "Subclasses of ConcreteDropout must implement the noise shape")

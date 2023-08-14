@@ -24,6 +24,13 @@ class CFPNetM(Model):
         self.x_train = x_train
         super().__init__(name, input_dim, output_dim)
 
+    def set_train_size(self, train_size: int):
+        self.wr = get_weight_regularizer(train_size, l=1e-2, tau=1.0)
+        self.dr = get_dropout_regularizer(train_size, tau=1.0)
+        for layer in self.model.layers:
+            if isinstance(layer, ConcreteSpatialDropout2D):
+                layer.set_regularizers(self.wr, self.dr)
+
     def conv2d_bn(self, x, filters, kernel_size=(3, 3), d_rate=1, strides=(1, 1), padding='same', activation='relu',
                   groups=1):
         x = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, dilation_rate=d_rate,
@@ -164,6 +171,6 @@ class CFPNetM(Model):
         conv6 = ConcreteSpatialDropout2D(conv6_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                          is_mc_dropout=self.is_mc_dropout)(up_2)
 
-        output_layer = tf.keras.layers.Conv2D(filters=1, kernel_size=(1, 1), activation='sigmoid')(conv6)
+        output_layer = tf.keras.layers.Conv2D(filters=1, kernel_size=(1, 1), activation='sigmoid', dtype='float32')(conv6)
 
         self.model = tf.keras.models.Model(inputs=input_tensor, outputs=output_layer)

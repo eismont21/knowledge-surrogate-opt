@@ -29,6 +29,13 @@ class DenseModelDropout(Model):
         self.is_mc_dropout = is_mc_dropout
         super().__init__(name, input_dim, output_dim)
 
+    def set_train_size(self, train_size: int):
+        self.wr = get_weight_regularizer(train_size, l=1e-2, tau=1.0)
+        self.dr = get_dropout_regularizer(train_size, tau=1.0)
+        for layer in self.model.layers:
+            if isinstance(layer, ConcreteDenseDropout):
+                layer.set_regularizers(self.wr, self.dr)
+
     def build(self):
         input_tensor = tf.keras.Input(shape=(self.input_dim[0],))
 
