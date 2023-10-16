@@ -75,6 +75,8 @@ class Model(ABC):
         model_checkpoint_last = tf.keras.callbacks.ModelCheckpoint(self.last_epoch_filepath,
                                                                    save_weights_only=True, save_best_only=False)
         callbacks = [nan_terminate, early_stopping, model_checkpoint_best, model_checkpoint_last]
+        if is_sbo:
+            callbacks.remove(model_checkpoint_last)
         if any(hasattr(layer, 'p_logit') for layer in self.model.layers):
             callbacks.append(DropoutHistory())
 
@@ -105,10 +107,6 @@ class Model(ABC):
         return metrics_values
 
     def predict(self, x, batch_size: int = 40, verbose: int = 0):
-        #results = np.zeros((x.shape[0], *self.output_dim)).astype(np.float32)
-        #for j in range(0, x.shape[0], chunk_size):
-        #    preds = self.model.predict(x[j:j + chunk_size], batch_size=batch_size, verbose=verbose)
-        #    results[j:j + len(preds)] = preds
         return self.model.predict(x, batch_size=batch_size, verbose=verbose)
 
     def mc_predict(self, dataset, mc_iterations: int, mean: bool = True, batch_size: int = 8):

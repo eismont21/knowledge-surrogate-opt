@@ -11,8 +11,7 @@ class CFPNetM(Model):
     '''
 
     def __init__(self, name: str, input_dim: int, output_dim, train_size: int = 100, base_filters: int = 64,
-                 kernel_size: int = 3,
-                 activation: str = 'relu', initializer: str = 'he_normal', x_train=None,
+                 kernel_size: int = 3, activation: str = 'relu', initializer: str = 'he_normal', x_train=None,
                  encoding: str = 'naive', positional_encoding: int = 0, is_mc_dropout: bool = False):
         self.base_filters = base_filters
         self.kernel_size = kernel_size
@@ -56,6 +55,7 @@ class CFPNetM(Model):
             [keras layer] -- [output layer]
         '''
         x_inp = self.conv2d_bn(inp, filters // 4, kernel_size=(1, 1))
+
         x_1_1 = self.conv2d_bn(x_inp, filters // 16, groups=filters // 16)
         x_1_2 = self.conv2d_bn(x_1_1, filters // 16, groups=filters // 16)
         x_1_3 = self.conv2d_bn(x_1_2, filters // 8, groups=filters // 16)
@@ -175,7 +175,6 @@ class CFPNetM(Model):
         conv6 = ConcreteSpatialDropout2D(conv6_layer, weight_regularizer=self.wr, dropout_regularizer=self.dr,
                                          is_mc_dropout=self.is_mc_dropout)(up_2)
 
-        output_layer = tf.keras.layers.Conv2D(filters=1, kernel_size=(1, 1), activation='sigmoid', dtype='float32')(
-            conv6)
+        output_layer = tf.keras.layers.Conv2D(filters=1, kernel_size=(1, 1), activation='sigmoid')(conv6)
 
         self.model = tf.keras.models.Model(inputs=input_tensor, outputs=output_layer)
