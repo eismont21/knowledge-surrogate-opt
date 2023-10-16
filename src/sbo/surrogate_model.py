@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 class SurrogateModel(AbstractModel):
     def __init__(self, configspace, model, data_loader, obj_function, oracle, n_inferences: int = 40,
-                 chunk_size: int = 100):
+                 chunk_size: int = 100, save_filepath: str = 'test_sbo'):
         super().__init__(configspace)
         self.oracle = oracle
         self.scaler = Scaler()
@@ -31,7 +31,7 @@ class SurrogateModel(AbstractModel):
         self.n_inferences = n_inferences
         self.chunk_size = chunk_size
         self.obj_function = obj_function
-        self.save_filepath = 'test_sbo'
+        self.save_filepath = os.path.join(save_filepath, 'models')
         self.opt_start = None
         self.pbar = None
 
@@ -61,7 +61,7 @@ class SurrogateModel(AbstractModel):
         self._reset_weights()
         self.model.set_train_size(X.shape[0])
         _ = self.model.train(train_dataset, self.val_dataset,
-                             epochs=5, early_stop_patience=100, verbose=0,
+                             epochs=300, early_stop_patience=60, verbose=0,
                              save_filepath=self.save_filepath + f'/{X.shape[0]}',
                              save_history=True, is_sbo=True)
         _ = self.model.evaluate(self.val_dataset, verbose=0, save_result=True)
@@ -93,8 +93,8 @@ class SurrogateModel(AbstractModel):
             # Apply objective function
             results = np.array([[self.obj_function(pred) for pred in batch] for batch in transformed_predictions])
 
-            mean = results.mean(axis=1)
-            variance = results.var(axis=1)
+            mean = results.mean(axis=1).reshape(-1)
+            variance = results.var(axis=1).reshape(-1)
 
             # Update the pre-allocated arrays
             final_mean[start_idx:start_idx + len(mean)] = mean
