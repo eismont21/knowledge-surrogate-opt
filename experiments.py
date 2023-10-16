@@ -1,3 +1,7 @@
+import os
+import traceback
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import collections
 import random
 import numpy as np
@@ -5,7 +9,6 @@ import pandas as pd
 import tensorflow as tf
 import seaborn as sns
 import matplotlib.pyplot as plt
-import os
 import json
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -16,7 +19,7 @@ from datetime import datetime
 import glob
 import gc
 from src.models import DenseModel, DenseModelDropout, UNet, MultiPathUNet, EncoderDecoder, \
-    MultiPathEncoderDecoderDropout, EncoderDecoderDropout, CFPNetM, MultiPathCFPNetM
+    MultiPathEncoderDecoderDropout, MultiPathEncoderDecoder, EncoderDecoderDropout, CFPNetM, MultiPathCFPNetM
 from src.dataloaders import BaselineDataLoader, ImagesDataLoader, VectorImagesDataLoader
 from src.loss_functions import SSIMLoss, TotalLoss, WeightedLoss
 from src.metrics import SSIMLossMetric, TotalLossMetric, WeightedLossMetric, MAE, RMSE
@@ -67,6 +70,7 @@ def get_data_loader(config):
 
 
 def get_model(config, train_dataset, x_train):
+    train_size = len(x_train)
     if config['model'] == 'Baseline':
         model = DenseModel(name='Baseline',
                            input_dim=train_dataset.element_spec[0].shape[1:],
@@ -75,7 +79,7 @@ def get_model(config, train_dataset, x_train):
         model = DenseModelDropout(name='BaselineDropout',
                                   input_dim=train_dataset.element_spec[0].shape[1:],
                                   output_dim=train_dataset.element_spec[1].shape[1:],
-                                  x_train=x_train)
+                                  train_size=train_size)
     elif config['model'] == 'UNet':
         if config['encoding'] == 'multipath':
             model = MultiPathUNet(name='MultiPathUNet',
@@ -84,21 +88,29 @@ def get_model(config, train_dataset, x_train):
                                       train_dataset.element_spec[0][1].shape[1:]),
                                   output_dim=train_dataset.element_spec[1].shape[1:],
                                   positional_encoding=config['positional_encoding'],
-                                  x_train=x_train)
+                                  train_size=train_size)
         else:
             model = UNet(name='UNet',
                          input_dim=train_dataset.element_spec[0].shape[1:],
                          output_dim=train_dataset.element_spec[1].shape[1:],
                          encoding=config['encoding'],
                          positional_encoding=config['positional_encoding'],
-                         x_train=x_train)
+                         x_train=x_train, train_size=train_size)
     elif config['model'] == 'EncoderDecoder':
-        model = EncoderDecoder(name='EncoderDecoder',
-                               input_dim=train_dataset.element_spec[0].shape[1:],
-                               output_dim=train_dataset.element_spec[1].shape[1:],
-                               encoding=config['encoding'],
-                               positional_encoding=config['positional_encoding'],
-                               x_train=x_train)
+        if config['encoding'] == 'multipath':
+            model = MultiPathEncoderDecoder(name='MultiPathEncoderDecoder',
+                                            input_dim=(
+                                                train_dataset.element_spec[0][0].shape[1:],
+                                                train_dataset.element_spec[0][1].shape[1:]),
+                                            output_dim=train_dataset.element_spec[1].shape[1:],
+                                            positional_encoding=config['positional_encoding'])
+        else:
+            model = EncoderDecoder(name='EncoderDecoder',
+                                   input_dim=train_dataset.element_spec[0].shape[1:],
+                                   output_dim=train_dataset.element_spec[1].shape[1:],
+                                   encoding=config['encoding'],
+                                   positional_encoding=config['positional_encoding'],
+                                   x_train=x_train)
     elif config['model'] == 'EncoderDecoderDropout':
         if config['encoding'] == 'multipath':
             model = MultiPathEncoderDecoderDropout(name='MultiPathEncoderDecoderDropout',
@@ -107,14 +119,14 @@ def get_model(config, train_dataset, x_train):
                                                        train_dataset.element_spec[0][1].shape[1:]),
                                                    output_dim=train_dataset.element_spec[1].shape[1:],
                                                    positional_encoding=config['positional_encoding'],
-                                                   x_train=x_train)
+                                                   train_size=train_size)
         else:
             model = EncoderDecoderDropout(name='EncoderDecoderDropout',
                                           input_dim=train_dataset.element_spec[0].shape[1:],
                                           output_dim=train_dataset.element_spec[1].shape[1:],
                                           encoding=config['encoding'],
                                           positional_encoding=config['positional_encoding'],
-                                          x_train=x_train)
+                                          x_train=x_train, train_size=train_size)
     elif config['model'] == 'CFPNetM':
         if config['encoding'] == 'multipath':
             model = MultiPathCFPNetM(name='MultiPathCFPNetM',
@@ -123,14 +135,16 @@ def get_model(config, train_dataset, x_train):
                                          train_dataset.element_spec[0][1].shape[1:]),
                                      output_dim=train_dataset.element_spec[1].shape[1:],
                                      positional_encoding=config['positional_encoding'],
-                                     x_train=x_train)
+                                     train_size=train_size)
         else:
             model = CFPNetM(name='CFPNetM',
                             input_dim=train_dataset.element_spec[0].shape[1:],
                             output_dim=train_dataset.element_spec[1].shape[1:],
                             encoding=config['encoding'],
                             positional_encoding=config['positional_encoding'],
-                            x_train=x_train)
+                            x_train=x_train, train_size=train_size,
+                            base_filters=config['base_filters'],
+                            kernel_size=config['kernel_size'])
     else:
         raise ValueError(f"Unknown model type: {config['model']['type']}")
 
@@ -156,16 +170,16 @@ def get_loss_function(config):
         loss_metric = WeightedLossMetric(name='Loss_Weighted_MAE', obj_function=p_norm,
                                          loss_fn=tf.keras.losses.MeanAbsoluteError(), inverse=True)
     elif config['loss_function'] == 'total_mse':
-        loss_function = TotalLoss(obj_function=p_norm, loss_fn=tf.keras.losses.MeanSquaredError())
+        loss_function = TotalLoss(obj_function=p_norm, loss_fn=tf.keras.losses.MeanSquaredError(), alpha=0.5)
         loss_metric = TotalLossMetric(name='Loss_Total_MSE', obj_function=p_norm,
-                                      loss_fn=tf.keras.losses.MeanSquaredError())
+                                      loss_fn=tf.keras.losses.MeanSquaredError(), alpha=0.5)
     elif config['loss_function'] == 'total_mae':
-        loss_function = TotalLoss(obj_function=p_norm, loss_fn=tf.keras.losses.MeanAbsoluteError())
+        loss_function = TotalLoss(obj_function=p_norm, loss_fn=tf.keras.losses.MeanAbsoluteError(), alpha=0.5)
         loss_metric = TotalLossMetric(name='Loss_Total_MAE', obj_function=p_norm,
-                                      loss_fn=tf.keras.losses.MeanAbsoluteError())
+                                      loss_fn=tf.keras.losses.MeanAbsoluteError(), alpha=0.5)
     elif config['loss_function'] == 'total_ssim':
-        loss_function = TotalLoss(obj_function=p_norm, loss_fn=SSIMLoss())
-        loss_metric = TotalLossMetric(name='Loss_Total_SSIM', obj_function=p_norm, loss_fn=SSIMLoss())
+        loss_function = TotalLoss(obj_function=p_norm, loss_fn=SSIMLoss(), alpha=0.5)
+        loss_metric = TotalLossMetric(name='Loss_Total_SSIM', obj_function=p_norm, loss_fn=SSIMLoss(), alpha=0.5)
     else:
         raise ValueError(f"Unknown loss function: {config['loss_function']}")
 
@@ -233,7 +247,8 @@ def run_experiment(config):
     model = get_model(config, train_dataset, x_train)
     loss_function, loss_metric = get_loss_function(config)
     optimizer = config['optimizer']
-    model.compile(optimizer=optimizer, loss=loss_function, loss_metric=loss_metric, obj_function=p_norm)
+    lr = config['learning_rate'] if 'learning_rate' in config else 1e-3
+    model.compile(optimizer=optimizer, loss=loss_function, loss_metric=loss_metric, obj_function=p_norm, lr=lr)
     history = model.train(train_dataset, val_dataset,
                           epochs=config['epochs'], early_stop_patience=config['early_stop_patience'], verbose=0,
                           save_filepath=config['output_dir'])
@@ -306,6 +321,8 @@ def worker(config, gpu_queue):
     os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
     config['gpu_id'] = gpu_id
 
+    # strategy = tf.distribute.MirroredStrategy()
+    # with strategy.scope():
     while True:
         dir_name = time.strftime('%d-%m-%Y_%H-%M-%S')
         config['output_dir'] = os.path.join('experiments', dir_name)
@@ -325,8 +342,10 @@ def worker(config, gpu_queue):
         save_config(config)
     except Exception as e:
         failed_configs.append(config)
+        config["data"].pop("train_indices", None)
+        config["data"].pop("test_indices", None)
         send_log_tg(str(e) + '\n\n' + str(config) + '\n\n' + 'Failed configs: ' + str(len(failed_configs)))
-        # traceback.print_exc()
+        traceback.print_exc()
 
     gpu_queue.put(gpu_id)
 
@@ -335,12 +354,27 @@ def p_norm(matrix, p=4):
     return tf.norm(matrix, ord=p)
 
 
-with open('configs.json', 'r') as f:
-    configs = json.load(f)
+# with open('configs_pos_enc.json', 'r') as f:
+# with open('configs_loss.json', 'r') as f:
+#    configs = json.load(f)
 
-configs = get_remaining_experiments(configs)
+# configs = get_remaining_experiments(configs)
+# configs = [ex for ex in configs if ex['run'] > 2]
+
+configs = []
 
 n_runs = 5
+train_sizes = [100, 250, 500, 900]
+for i in range(n_runs):
+    for train_size in train_sizes:
+        for pos_enc in [1, 2]:
+            configs.append({"run": i, "data": {"type": "vector_images", "train_size": train_size, "test_size": 100},
+                            "model": "EncoderDecoder", "loss_function": "mse", "optimizer": "adam",
+                            "encoding": "multipath", "positional_encoding": pos_enc, "epochs": 300,
+                            "early_stop_patience": 60})
+
+random.shuffle(configs)
+configs = sorted(configs, key=lambda x: x['run'])
 
 splits = {
     100: iterative_split(n_runs, train_size=100, test_size=100),
@@ -352,7 +386,7 @@ splits = {
 
 failed_configs = []
 
-gpus = ["0", "1", "2", "3"]
+gpus = ["1", "2"]
 
 
 def main():
@@ -366,6 +400,8 @@ def main():
 
             for _ in tqdm(concurrent.futures.as_completed(futures), total=len(configs)):
                 pass
+
+    send_log_tg('All experiments finished')
 
 
 if __name__ == "__main__":
