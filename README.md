@@ -98,7 +98,7 @@ performance of neural networks.
 
 ### Model Comparison
 
-![Plot showing model comparison](./results_model.pdf)
+![Plot showing model comparison](./results_model.png)
 
 - **Convolutional vs. FCNN**: Convolutional networks, especially U-Net and CFPNet-M, dominate FCNNs in MAE for small
   training dataset sizes and in terms of RMSE_obj across all dataset sizes.
@@ -109,7 +109,7 @@ performance of neural networks.
 
 ### SBO Results
 
-![Plot showing SBO results](./results_opt_1.pdf)
+![Plot showing SBO results](./results_opt_1.png)
 
 - **Surrogate vs. Traditional Heuristics**: Surrogate models, particularly CFPNet-M, offer a more efficient exploration
   of the solution space, unlike heuristic methods that might not fully grasp the underlying function.
