@@ -7,9 +7,25 @@ from src.constants import STAMP_SHAPE_MATRIX_PATH, ENCODING_PATH, LENGTHS_PATH
 
 
 class DomainEncoding(tf.keras.layers.Layer):
-    def __init__(self, name='domain_encoding', stamp_shape_matrix_path=STAMP_SHAPE_MATRIX_PATH,
-                 encodings_path=ENCODING_PATH, lengths_path=LENGTHS_PATH,
-                 use_lengths=False, **kwargs):
+    """
+    Custom layer for domain-based encodings (Stiffness Changes and Force Changes).
+
+    This method lies on the transformation equation that explicate the changes in stiffness ensuing from
+    the rotation of fibers relative to the force application point.
+
+    Attributes:
+    - stamp_shape_matrix_path (str): Path to the stamp shape matrix data.
+    - encodings_path (str): Path to the precomputed domain encodings.
+    - lengths_path (str): Path to data of the lengths of stretched springs.
+    - use_lengths (bool): Flag to determine if lengths are used for scaling encodings (Force Changes Encoding).
+    - stamp_shape_matrix (tf.Tensor): Tensor representation of the stamp shape matrix.
+    - encodings (tf.Tensor): Tensor representation of the domain encodings.
+    - lengths (np.ndarray): If use_lengths is True, contains the scaled lengths.
+    """
+
+    def __init__(self, name: str = 'domain_encoding', stamp_shape_matrix_path: str = STAMP_SHAPE_MATRIX_PATH,
+                 encodings_path: str = ENCODING_PATH, lengths_path: str = LENGTHS_PATH, use_lengths: bool = False,
+                 **kwargs) -> None:
         super().__init__(name=name, **kwargs)
         self.stamp_shape_matrix_path = stamp_shape_matrix_path
         stamp_shape_matrix = np.load(self.stamp_shape_matrix_path)
@@ -22,7 +38,7 @@ class DomainEncoding(tf.keras.layers.Layer):
         if self.use_lengths:
             self.lenghts = scaler.scale(pd.read_csv(lengths_path).to_numpy(), col_name="length")
 
-    def build(self, input_shape):
+    def build(self, input_shape: tf.TensorShape) -> None:
         self.input_dim = input_shape[-1]
 
         encodings = []
@@ -38,7 +54,7 @@ class DomainEncoding(tf.keras.layers.Layer):
         super().build(input_shape)
 
     @tf.function
-    def call(self, inputs):
+    def call(self, inputs: tf.Tensor) -> tf.Tensor:
         batch_size = tf.shape(inputs)[0]
         inputs = tf.reshape(inputs, [batch_size, 1, 1, -1])
 
@@ -51,7 +67,7 @@ class DomainEncoding(tf.keras.layers.Layer):
 
         return result
 
-    def get_config(self):
+    def get_config(self) -> dict:
         config = super().get_config()
         config.update({
             "stamp_shape_matrix_path": self.stamp_shape_matrix_path,

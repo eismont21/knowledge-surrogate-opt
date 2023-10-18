@@ -5,9 +5,28 @@ from src.layers.concrete_dropout import ConcreteSpatialDropout2D, get_weight_reg
 
 
 class UNet(Model):
+    """
+    UNet is an implementation of the U-Net model  with concrete dropout functionality for medical imaging segmentation.
+
+    References:
+    - Olaf Ronneberger et al. "U-Net: Convolutional Networks for Biomedical Image Segmentation" - arXiv:1505.04597
+
+    Attributes:
+    - base_filters (int): The initial number of filters for the convolutional layers.
+    - kernel_size (int): Size of the convolutional kernel.
+    - initializer (str): Initializer for the weights of layers.
+    - activation (str): Activation function used in the network.
+    - encoding (str): Type of input data encoding to use; options include 'deepinsight', 'domain', 'domain_lengths', and 'naive'.
+    - positional_encoding (int): Type of positional encoding to apply. Default is 0 (no encoding).
+    - wr (float): Weight regularization parameter.
+    - dr (float): Dropout regularization parameter.
+    - is_mc_dropout (bool): Dropout regularization parameter.
+    - x_train (ndarray): Training dataset, used if encoding is 'deepinsight'.
+    """
+
     def __init__(self, name: str, input_dim: int, output_dim, train_size: int = 100, base_filters: int = 64,
                  activation: str = 'relu', initializer: str = 'he_normal', x_train=None,
-                 encoding: str = 'naive', positional_encoding: int = 0, is_mc_dropout: bool = False):
+                 encoding: str = 'naive', positional_encoding: int = 0, is_mc_dropout: bool = False) -> None:
         self.base_filters = base_filters
         self.initializer = initializer
         self.activation = activation
@@ -19,7 +38,7 @@ class UNet(Model):
         self.x_train = x_train
         super().__init__(name, input_dim, output_dim)
 
-    def build(self):
+    def build(self) -> None:
         input_tensor = tf.keras.layers.Input(self.input_dim)
 
         if self.encoding == 'deepinsight' and self.x_train is not None:

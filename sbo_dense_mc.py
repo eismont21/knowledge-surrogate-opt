@@ -1,3 +1,12 @@
+"""
+Script for Hyperparameter Optimization using SMAC and FCNN with MC-Dropout as surrogate model.
+
+This script initializes a hyperparameter configuration space, sets up a specific scenario for optimization,
+defines the objective function to be minimized, and then uses the SMAC framework to perform optimization on
+the given objective. After optimization, it validates and prints the results for both the default configuration
+and the found incumbent configuration.
+"""
+
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -25,6 +34,9 @@ ex_name = 'dense_mc'
 
 
 def p_norm(matrix, p=4):
+    """
+    The user-defined objective function.
+    """
     return float(tf.norm(matrix, ord=p))
 
 
@@ -61,7 +73,6 @@ if os.path.exists(f"smac3_output/{ex_name}/{seed}/runhistory.json"):
     run_history = RunHistory()
     run_history.load(f"smac3_output/{ex_name}/{seed}/runhistory.json", cs)
     run_history_encoder.runhistory = run_history
-
 
 smac = HPOFacade(
     scenario=scenario,

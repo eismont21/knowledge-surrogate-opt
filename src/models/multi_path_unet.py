@@ -7,9 +7,28 @@ from src.layers.concrete_dropout import ConcreteDenseDropout, ConcreteSpatialDro
 
 
 class MultiPathUNet(Model):
+    """
+    MultiPathUNet is a multi-path implementation of the U-Net model  with concrete dropout functionality for medical imaging segmentation.
+
+    References:
+    - Olaf Ronneberger et al. "U-Net: Convolutional Networks for Biomedical Image Segmentation" - arXiv:1505.04597
+
+    Attributes:
+    - input_matrix_dim: Dimensionality of the matrix input.
+    - input_vector_dim: Dimensionality of the vector input.
+    - base_filters (int): The initial number of filters for the convolutional layers.
+    - initializer (str): Initializer for the weights of layers.
+    - activation (str): Activation function used in the network.
+    - hidden_neurons (int): Number of neurons in the hidden layers.
+    - positional_encoding (int): Type of positional encoding to apply. Default is 0 (no encoding).
+    - wr (float): Weight regularization parameter.
+    - dr (float): Dropout regularization parameter.
+    - is_mc_dropout (bool): Dropout regularization parameter.
+    """
+
     def __init__(self, name: str, input_dim, output_dim, train_size: int = 100, base_filters: int = 64,
                  activation: str = 'relu', initializer: str = 'he_normal', hidden_neurons: int = 500,
-                 positional_encoding: int = 0, is_mc_dropout: bool = False):
+                 positional_encoding: int = 0, is_mc_dropout: bool = False) -> None:
         self.input_matrix_dim, self.input_vector_dim = input_dim
         self.base_filters = base_filters
         self.initializer = initializer
@@ -21,7 +40,7 @@ class MultiPathUNet(Model):
         self.is_mc_dropout = is_mc_dropout
         super().__init__(name, input_dim, output_dim)
 
-    def build(self):
+    def build(self) -> None:
         input_tensor = tf.keras.layers.Input(self.input_matrix_dim)
         c0 = input_tensor
 

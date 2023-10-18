@@ -10,7 +10,19 @@ import json
 
 
 class Model(ABC):
-    def __init__(self, name: str, input_dim, output_dim):
+    """
+    Abstract base class for defining machine learning models.
+
+    Attributes:
+    - name (str): The name of the model.
+    - input_dim: Dimensionality of the input data.
+    - output_dim: Dimensionality of the output predictions.
+    - model (tf.keras.Model): The underlying TensorFlow model.
+    - compile_args: Arguments used for compiling the model.
+    - metrics (List[tf.keras.metrics.Metric]): List of metrics to be evaluated by the compiled model.
+    """
+
+    def __init__(self, name: str, input_dim, output_dim) -> None:
         self.name = name
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -18,11 +30,11 @@ class Model(ABC):
         self.compile_args = None
 
     @abstractmethod
-    def build(self):
+    def build(self) -> None:
         pass
 
-    def compile(self, optimizer: str, loss: str, metrics_inverse: bool = True, tolerance: int = 3,
-                loss_metric=None, obj_function=None, lr: float = 0.0015):
+    def compile(self, optimizer: str, loss: str, metrics_inverse: bool = True, tolerance: float = 3,
+                loss_metric=None, obj_function=None, lr: float = 0.0015) -> None:
         if self.compile_args is None:
             self.compile_args = (optimizer, loss, metrics_inverse, tolerance, loss_metric, obj_function)
 
@@ -52,13 +64,14 @@ class Model(ABC):
 
         self.model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
-    def reload(self, is_mc_dropout: bool, filepath: str):
+    def reload(self, is_mc_dropout: bool, filepath: str) -> None:
         self.is_mc_dropout = is_mc_dropout
         self.build()
         self.model.load_weights(filepath)
 
-    def train(self, train_dataset, val_dataset, epochs: int = 100, verbose: int = 1,
-              early_stop_patience: int = 100, save_filepath: str = 'tmp/', save_history: bool = False, is_sbo=False):
+    def train(self, train_dataset: tf.data.Dataset, val_dataset: tf.data.Dataset, epochs: int = 100, verbose: int = 1,
+              early_stop_patience: int = 100, save_filepath: str = 'tmp/', save_history: bool = False,
+              is_sbo: bool = False):
         self.save_filepath = save_filepath
         self.best_model_filepath = os.path.join(save_filepath, 'best_weights.h5')
         self.last_epoch_filepath = os.path.join(save_filepath, 'last_epoch_weights.h5')
@@ -91,10 +104,11 @@ class Model(ABC):
 
         return history
 
-    def load_weights(self, filepath: str):
+    def load_weights(self, filepath: str) -> None:
         self.model.load_weights(filepath)
 
-    def evaluate(self, dataset, batch_size: int = 8, verbose: int = 0, save_result: bool = False):
+    def evaluate(self, dataset: tf.data.Dataset, batch_size: int = 8, verbose: int = 0,
+                 save_result: bool = False) -> dict:
         scores = self.model.evaluate(dataset, batch_size=batch_size, verbose=verbose)
         metrics_values = {}
         for i, metric in enumerate(self.metrics):
@@ -157,14 +171,14 @@ class Model(ABC):
 
         return metrics_values
 
-    def save_history(self, history):
+    def save_history(self, history) -> pd.DataFrame:
         os.makedirs(os.path.join(self.save_filepath, 'metrics'), exist_ok=True)
         history_df = pd.DataFrame(history.history)
         history_df['epoch'] = history.epoch
         history_df.to_csv(os.path.join(self.save_filepath, 'metrics', 'history.csv'), index=False)
         return history_df
 
-    def save_history_plots(self, history_df):
+    def save_history_plots(self, history_df: pd.DataFrame) -> None:
         metrics_dir = os.path.join(self.save_filepath, 'metrics')
         metrics = [col for col in history_df.columns if not col.startswith('val_') and col != 'epoch']
         dropout_metrics = [col for col in metrics if 'dropout' in col]
@@ -193,5 +207,5 @@ class Model(ABC):
             plt.savefig(os.path.join(metrics_dir, 'dropouts.png'), bbox_inches='tight', pad_inches=0.1)
             plt.close()
 
-    def set_train_size(self, train_size: int):
+    def set_train_size(self, train_size: int) -> None:
         pass

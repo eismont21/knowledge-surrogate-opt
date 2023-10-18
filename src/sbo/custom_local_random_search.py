@@ -3,12 +3,17 @@ from ConfigSpace import Configuration
 
 
 class CustomLocalAndSortedRandomSearch(LocalAndSortedRandomSearch):
+    """
+    CustomLocalAndSortedRandomSearch is an extension of the `LocalAndSortedRandomSearch` class. This custom implementation
+    focuses on maximizing the acquisition function value by combining results from both random (5000 points)
+    and local search methods, and then sorting the combined results based on the acquisition value.
+    """
+
     def _maximize(
             self,
             previous_configs: list[Configuration],
             n_points: int,
     ) -> list[tuple[float, Configuration]]:
-        # Get configurations sorted by EI
         next_configs_by_random_search_sorted = self._random_search._maximize(
             previous_configs=previous_configs,
             n_points=5000,

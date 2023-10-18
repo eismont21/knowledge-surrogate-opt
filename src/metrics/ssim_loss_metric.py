@@ -4,7 +4,20 @@ from src.constants import MATRIX_SHAPE
 
 
 class SSIMLossMetric(tf.keras.metrics.Metric):
-    def __init__(self, name='loss_ssim', inverse=False, max_val=90, filter_size=5, **kwargs):
+    """
+    Custom metric to compute the Structural Similarity Index (SSIM) loss.
+
+    Attributes:
+    - max_val (int): The maximum value of the data type for SSIM computation.
+    - filter_size (int): The size of the window for SSIM computation.
+    - total (tf.Tensor): Sum of SSIM loss values.
+    - count (tf.Tensor): Total number of elements used for calculating SSIM loss.
+    - scaler (Scaler): Instance of the Scaler class to inverse transform values.
+    - inverse (bool): If True, inverse transformation is applied to the inputs.
+    """
+
+    def __init__(self, name: str = 'loss_ssim', inverse: bool = False, max_val: int = 90, filter_size: int = 5,
+                 **kwargs) -> None:
         super(SSIMLossMetric, self).__init__(name=name, **kwargs)
         self.max_val = max_val
         self.filter_size = filter_size
@@ -15,7 +28,7 @@ class SSIMLossMetric(tf.keras.metrics.Metric):
         if not self.inverse:
             self.max_val = self.scaler.scale(self.max_val, col_name="strain_field_matrix")
 
-    def update_state(self, y_true, y_pred, sample_weight=None):
+    def update_state(self, y_true: tf.Tensor, y_pred: tf.Tensor, sample_weight=None) -> None:
         if len(tf.shape(y_true)) != 4:
             y_true = tf.reshape(y_true, [-1, *MATRIX_SHAPE, 1])
             y_pred = tf.reshape(y_pred, [-1, *MATRIX_SHAPE, 1])
@@ -28,9 +41,9 @@ class SSIMLossMetric(tf.keras.metrics.Metric):
         self.total.assign_add(tf.reduce_sum(ssim_value))
         self.count.assign_add(tf.cast(tf.shape(y_true)[0], dtype=tf.float32))
 
-    def result(self):
+    def result(self) -> tf.Tensor:
         return tf.math.divide_no_nan(self.total, self.count)
 
-    def reset_state(self):
+    def reset_state(self) -> None:
         self.total.assign(0.)
         self.count.assign(0.)

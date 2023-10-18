@@ -2,7 +2,15 @@ import pandas as pd
 
 
 class Scaler:
-    def __init__(self):
+    """
+    Class responsible for scaling and inverse-transforming data based on predefined
+    min-max values for specific columns.
+
+    Attributes:
+    - COL_MIN_MAX: Dictionary containing the min-max values for specific columns.
+    """
+
+    def __init__(self) -> None:
         self.COL_MIN_MAX = {
             "gripper_x": [0, 300],
             "gripper_y": [0, 460],
@@ -36,7 +44,7 @@ class Scaler:
             return self._scale_columns(data, min_val, max_val)
 
     @staticmethod
-    def _scale_columns(data, min_val, max_val):
+    def _scale_columns(data, min_val: float, max_val: float):
         return (data - min_val) / (max_val - min_val)
 
     def inverse_transform(self, data, col_name=None):
@@ -53,5 +61,5 @@ class Scaler:
             return self._inverse_transform_columns(data, min_val, max_val)
 
     @staticmethod
-    def _inverse_transform_columns(data, min_val, max_val):
+    def _inverse_transform_columns(data, min_val: float, max_val: float):
         return data * (max_val - min_val) + min_val

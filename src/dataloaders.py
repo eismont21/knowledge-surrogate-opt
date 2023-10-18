@@ -7,24 +7,36 @@ from src.scaler import Scaler
 
 
 class DataLoader(ABC):
-    def __init__(self, data_path: str, input_regex: str, output_regex: str):
+    """
+    Abstract base class for data loading.
+
+    Attributes:
+    - data_path (str): Absolute path to the dataset.
+    - input_regex (str): Regex pattern for selecting input columns from dataset.
+    - output_regex (str): Regex pattern for selecting output columns from dataset.
+    - scaler (Scaler): Object for scaling the data.
+    """
+
+    def __init__(self, data_path: str, input_regex: str, output_regex: str) -> None:
         self.data_path = os.path.abspath(data_path)
         self.input_regex = input_regex
         self.output_regex = output_regex
         self.scaler = Scaler()
 
-    def load_data(self):
+    def load_data(self) -> (pd.DataFrame, pd.DataFrame):
         data = pd.read_csv(self.data_path)
         x = data.filter(regex=self.input_regex).copy(deep=True)
         y = data.filter(regex=self.output_regex).copy(deep=True)
         return x, y
 
     @abstractmethod
-    def create_dataset(self, x, y, batch_size):
+    def create_dataset(self, x: pd.DataFrame, y: pd.DataFrame, batch_size: int) -> tf.data.Dataset:
         pass
 
     @staticmethod
-    def split_data(x, y, train_size=None, test_size=None, train_ratio=None, test_ratio=None, seed=42, shuffle=True):
+    def split_data(x: pd.DataFrame, y: pd.DataFrame, train_size: int | None = None, test_size: int | None = None,
+                   train_ratio: float | None = None, test_ratio: float | None = None, seed: int = 42,
+                   shuffle: bool = True) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
 
         if train_size is not None and test_size is not None:
             assert train_size + test_size <= len(
@@ -52,10 +64,19 @@ class DataLoader(ABC):
 
 
 class BaselineDataLoader(DataLoader):
-    def __init__(self, data_path, input_regex="gripper_force", output_regex="strain_field_matrix_path"):
+    """
+    DataLoader for FCNN with a focus on 1D data.
+
+    The class assumes that the data includes paths to strain field matrices,
+    which are loaded, flattened, and then scaled.
+    """
+
+    def __init__(self, data_path: str, input_regex: str = "gripper_force",
+                 output_regex: str = "strain_field_matrix_path") -> None:
         super().__init__(data_path, input_regex, output_regex)
 
-    def create_dataset(self, x, y, batch_size, shuffle=True):
+    def create_dataset(self, x: pd.DataFrame, y: pd.DataFrame, batch_size: int,
+                       shuffle: bool = True) -> tf.data.Dataset:
         x_scaled = self.scaler.scale(x)
 
         y_copy = y.copy(deep=True)
@@ -77,15 +98,22 @@ class BaselineDataLoader(DataLoader):
 
 
 class ImagesDataLoader(DataLoader):
-    def __init__(self, data_path,
-                 input_regex="gripper_force",
-                 output_regex="strain_field_matrix_path"):
+    """
+    DataLoader for image data for fully convolutional neural networks.
+
+    This class assumes that the data includes paths to strain field matrices,
+    which are loaded and then expanded to fit the requirements of image data processing.
+    """
+
+    def __init__(self, data_path: str, input_regex: str = "gripper_force",
+                 output_regex: str = "strain_field_matrix_path") -> None:
         self.cached_stamp_shape_matrix = None
         self.cached_stiffness_distributions_grippers_matrices = None
         self.preprocessed_data_path = None
         super().__init__(data_path, input_regex, output_regex)
 
-    def create_dataset(self, x, y, batch_size, shuffle=True):
+    def create_dataset(self, x: pd.DataFrame, y: pd.DataFrame,
+                       batch_size: int, shuffle: bool = True) -> tf.data.Dataset:
         x_scaled = self.scaler.scale(x)
 
         y_copy = y.copy(deep=True)
@@ -106,15 +134,22 @@ class ImagesDataLoader(DataLoader):
 
 
 class VectorImagesDataLoader(DataLoader):
-    def __init__(self, data_path,
-                 input_regex="gripper_force|stamp_shape_matrix_path",
-                 output_regex="strain_field_matrix_path"):
+    """
+    DataLoader for vector-image combined data for multi-path architectures.
+
+    The class manages data that includes both vector and image information.
+    Assumes paths to matrices that need to be loaded and processed accordingly.
+    """
+
+    def __init__(self, data_path: str, input_regex: str = "gripper_force|stamp_shape_matrix_path",
+                 output_regex: str = "strain_field_matrix_path") -> None:
         self.cached_stamp_shape_matrix = None
         self.cached_stiffness_distributions_grippers_matrices = None
         self.preprocessed_data_path = None
         super().__init__(data_path, input_regex, output_regex)
 
-    def create_dataset(self, x, y, batch_size, shuffle=True):
+    def create_dataset(self, x: pd.DataFrame, y: pd.DataFrame,
+                       batch_size: int, shuffle: bool = True) -> tf.data.Dataset:
         x_copy = x.copy(deep=True)
         x_copy['stamp_shape_matrix'] = x_copy['stamp_shape_matrix_path'].apply(
             lambda path: np.expand_dims(np.load(path), axis=-1)

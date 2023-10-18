@@ -5,8 +5,19 @@ from src.scaler import Scaler
 
 
 class NaiveEncoding(tf.keras.layers.Layer):
-    def __init__(self, name='naive_encoding', stamp_shape_matrix_path=STAMP_SHAPE_MATRIX_PATH,
-                 **kwargs):
+    """
+    Custom layer for naive encoding.
+
+    The encoding takes an input tensor and broadcasts it to a shape determined by the `stamp_shape_matrix`.
+    The processed tensor is concatenated with the input tensor to produce the final encoded result.
+
+    Attributes:
+    - stamp_shape_matrix_path (str): Path to the numpy file containing the stamp shape matrix.
+    - stamp_shape_matrix (tf.Tensor): Processed tensor version of the loaded stamp shape matrix.
+    """
+
+    def __init__(self, name: str = 'naive_encoding', stamp_shape_matrix_path: str = STAMP_SHAPE_MATRIX_PATH,
+                 **kwargs) -> None:
         super().__init__(name=name, **kwargs)
         self.stamp_shape_matrix_path = stamp_shape_matrix_path
         stamp_shape_matrix = np.load(self.stamp_shape_matrix_path)
@@ -15,12 +26,12 @@ class NaiveEncoding(tf.keras.layers.Layer):
         stamp_shape_matrix = scaler.scale(stamp_shape_matrix, col_name="stamp_shape_matrix")
         self.stamp_shape_matrix = tf.convert_to_tensor(stamp_shape_matrix, dtype=tf.float32)
 
-    def build(self, input_shape):
+    def build(self, input_shape: tf.TensorShape) -> None:
         self.input_dim = input_shape[-1]
         super().build(input_shape)
 
     @tf.function
-    def call(self, inputs):
+    def call(self, inputs: tf.Tensor) -> tf.Tensor:
         batch_size = tf.shape(inputs)[0]
         inputs = tf.reshape(inputs, [batch_size, 1, 1, -1])
 
@@ -35,7 +46,7 @@ class NaiveEncoding(tf.keras.layers.Layer):
 
         return result
 
-    def get_config(self):
+    def get_config(self) -> dict:
         config = super().get_config()
         config.update({
             "stamp_shape_matrix_path": self.stamp_shape_matrix_path,

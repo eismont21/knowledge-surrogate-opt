@@ -1,3 +1,10 @@
+"""
+Script for generating and saving configurations for model training.
+
+This script creates configurations by taking a cartesian product of various hyperparameters,
+shuffles them, sorts them based on the 'run' key, and then writes them to a JSON file.
+"""
+
 import itertools
 import json
 import random
@@ -5,9 +12,9 @@ import random
 
 def main():
     n_runs = 5
-    #train_sizes = [100, 250, 500, 750, 900]
+    # train_sizes = [100, 250, 500, 750, 900]
     train_sizes = [100, 250, 500, 900]
-    #train_sizes = [250]
+    # train_sizes = [250]
     models = ['Baseline', 'BaselineDropout']
     loss_functions = ['mse', 'mae', 'ssim', 'weighted_mse', 'weighted_mae', 'total_mse', 'total_mae', 'total_ssim']
 
@@ -28,7 +35,7 @@ def main():
                 'epochs': 300,
                 'early_stop_patience': 60,
             }
-            #configs.append(config)
+            # configs.append(config)
 
     models = ['UNet', 'CFPNetM']
     encodings = ['domain']

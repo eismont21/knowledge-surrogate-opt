@@ -6,13 +6,28 @@ from keras.layers import add
 
 
 class CFPNetM(Model):
-    '''
-    Source: https://github.com/AngeLouCN/CFPNet-Medicine/tree/main
-    '''
+    """
+    CFPNetM is an implementation of the CFPNet-M model with concrete dropout functionality for medical imaging segmentation.
+
+    References:
+    - Ange Lou et al. "CFPNet-M: A Light-Weight Encoder-Decoder Based Network for Multimodal Biomedical Image Real-Time Segmentation" - arXiv:2103.12212
+
+    Attributes:
+    - base_filters (int): The initial number of filters for the convolutional layers.
+    - kernel_size (int): Size of the convolutional kernel.
+    - initializer (str): Initializer for the weights of layers.
+    - activation (str): Activation function used in the network.
+    - encoding (str): Type of input data encoding to use; options include 'deepinsight', 'domain', 'domain_lengths', and 'naive'.
+    - positional_encoding (int): Type of positional encoding to apply. Default is 0 (no encoding).
+    - wr (float): Weight regularization parameter.
+    - dr (float): Dropout regularization parameter.
+    - is_mc_dropout (bool): Dropout regularization parameter.
+    - x_train (ndarray): Training dataset, used if encoding is 'deepinsight'.
+    """
 
     def __init__(self, name: str, input_dim: int, output_dim, train_size: int = 100, base_filters: int = 64,
                  kernel_size: int = 3, activation: str = 'relu', initializer: str = 'he_normal', x_train=None,
-                 encoding: str = 'naive', positional_encoding: int = 0, is_mc_dropout: bool = False):
+                 encoding: str = 'naive', positional_encoding: int = 0, is_mc_dropout: bool = False) -> None:
         self.base_filters = base_filters
         self.kernel_size = kernel_size
         self.initializer = initializer
@@ -25,15 +40,15 @@ class CFPNetM(Model):
         self.x_train = x_train
         super().__init__(name, input_dim, output_dim)
 
-    def set_train_size(self, train_size: int):
+    def set_train_size(self, train_size: int) -> None:
         self.wr = get_weight_regularizer(train_size, l=1e-2, tau=1.0)
         self.dr = get_dropout_regularizer(train_size, tau=1.0)
         for layer in self.model.layers:
             if isinstance(layer, ConcreteSpatialDropout2D):
                 layer.set_regularizers(self.wr, self.dr)
 
-    def conv2d_bn(self, x, filters, kernel_size=None, d_rate=1, strides=(1, 1), padding='same', activation='relu',
-                  groups=1):
+    def conv2d_bn(self, x: tf.Tensor, filters: int, kernel_size=None, d_rate: int = 1, strides: (int, int) = (1, 1),
+                  padding: str = 'same', activation: str = 'relu', groups: int = 1) -> tf.Tensor:
         if kernel_size is None:
             kernel_size = (self.kernel_size, self.kernel_size)
         x = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, dilation_rate=d_rate,
@@ -43,17 +58,7 @@ class CFPNetM(Model):
 
         return x
 
-    def cfp_module(self, inp, filters, d_size):
-        '''
-        CFP module for medicine
-
-        Arguments:
-            U {int} -- Number of filters in a corrsponding UNet stage
-            inp {keras layer} -- input layer
-
-        Returns:
-            [keras layer] -- [output layer]
-        '''
+    def cfp_module(self, inp: tf.Tensor, filters: int, d_size: int) -> tf.Tensor:
         x_inp = self.conv2d_bn(inp, filters // 4, kernel_size=(1, 1))
 
         x_1_1 = self.conv2d_bn(x_inp, filters // 16, groups=filters // 16)
@@ -93,7 +98,7 @@ class CFPNetM(Model):
 
         return output
 
-    def build(self):
+    def build(self) -> None:
         input_tensor = tf.keras.layers.Input(self.input_dim)
 
         # Encoding Layer

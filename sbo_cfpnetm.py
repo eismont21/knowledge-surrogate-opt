@@ -1,3 +1,12 @@
+"""
+Script for Hyperparameter Optimization using SMAC and CFPNet-M as surrogate model.
+
+This script initializes a hyperparameter configuration space, sets up a specific scenario for optimization,
+defines the objective function to be minimized, and then uses the SMAC framework to perform optimization on
+the given objective. After optimization, it validates and prints the results for both the default configuration
+and the found incumbent configuration.
+"""
+
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -14,7 +23,7 @@ from smac.main.config_selector import ConfigSelector
 from ConfigSpace import ConfigurationSpace, Float, Configuration
 from src.sbo import Oracle, SaveAngleCallback, SurrogateModel, CustomLocalAndSortedRandomSearch
 from src.models import DenseModelDropout, CFPNetM
-from src.dataloaders import BaselineDataLoader, ImagesDataLoader
+from src.dataloaders import ImagesDataLoader
 from src.constants import INPUT_SHAPE, OUTPUT_SHAPE
 import tensorflow as tf
 
@@ -24,6 +33,9 @@ ex_name = 'cfpnetm'
 
 
 def p_norm(matrix, p=4):
+    """
+    The user-defined objective function.
+    """
     return float(tf.norm(matrix, ord=p))
 
 

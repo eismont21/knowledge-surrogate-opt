@@ -1,3 +1,11 @@
+"""
+Script for generating and saving shape geometries, stiffness distributions, and strain fields.
+
+This script creates shape geometries based on given node coordinates, calculates stiffness
+distributions around various gripper positions, and simulates strain fields due to material
+properties and external forces.
+"""
+
 import numpy as np
 import os
 import json
@@ -7,7 +15,7 @@ import pandas as pd
 from tqdm import tqdm
 
 path = os.path.dirname("__file__")
-data_path = os.path.join(path, "data_v2")
+data_path = os.path.join(path, "data")
 
 data_dics = {
     "doubledome": {
@@ -40,6 +48,9 @@ data_dics = {
 
 
 def create_shape(shape_name, dic_paths):
+    """
+    Create a shape image using greyscale parameters.
+    """
     shape_data_path = os.path.join(data_path, shape_name, "shape")
     os.makedirs(shape_data_path, exist_ok=True)
 
@@ -97,6 +108,9 @@ os.makedirs(encoding_data_path, exist_ok=True)
 
 
 def stiffness_distribution(x_0, y_0, x_dir, y_dir):
+    """
+    Calculate the stiffness distribution for given spring parameters.
+    """
     x_max = 300
     y_max = 460
 
@@ -166,6 +180,9 @@ for i in tqdm(range(len(grippers_point_coordinates_xy[0]))):
 
 
 def create_strain_field(shape_name, dic_paths, data_type, gamma, image_name):
+    """
+    Create a strain field image using the provided data.
+    """
     strain_field_data_path = os.path.join(data_path, shape_name, "strain_field", data_type)
     os.makedirs(strain_field_data_path, exist_ok=True)
 

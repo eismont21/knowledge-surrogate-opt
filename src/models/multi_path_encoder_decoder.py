@@ -7,10 +7,30 @@ from src.layers.concrete_dropout import ConcreteDenseDropout, ConcreteSpatialDro
 
 
 class MultiPathEncoderDecoderDropout(Model):
+    """
+    MultiPathEncoderDecoderDropout is a multi-path implementation of the Encoder-Decoder architecture with concrete dropout functionality.
+
+    References:
+    - Clemens Zimmerling "Machine learning algorithms for efficient process optimisation of variable geometries at the example of fabric forming" - DOI:10.5445/IR/1000154623
+
+    Attributes:
+    - input_matrix_dim: Dimensionality of the matrix input.
+    - input_vector_dim: Dimensionality of the vector input.
+    - base_filters (int): The initial number of filters for the convolutional layers.
+    - initializer (str): Initializer for the weights of layers.
+    - activation (str): Activation function used in the network.
+    - hidden_neurons (int): Number of neurons in the hidden layers.
+    - positional_encoding (int): Type of positional encoding to apply. Default is 0 (no encoding).
+    - upsampling_interpolation (str): Upsampling interpolation method.
+    - wr (float): Weight regularization parameter.
+    - dr (float): Dropout regularization parameter.
+    - is_mc_dropout (bool): Dropout regularization parameter.
+    """
+
     def __init__(self, name: str, input_dim, output_dim, train_size: int = 100, base_filters: int = 64,
                  activation: str = 'relu', initializer: str = 'glorot_uniform',
                  hidden_neurons: int = 500, positional_encoding: int = 0, is_mc_dropout: bool = False,
-                 upsampling_interpolation: str = 'nearest'):
+                 upsampling_interpolation: str = 'nearest') -> None:
         self.input_matrix_dim, self.input_vector_dim = input_dim
         self.base_filters = base_filters
         self.initializer = initializer
@@ -23,7 +43,7 @@ class MultiPathEncoderDecoderDropout(Model):
         self.is_mc_dropout = is_mc_dropout
         super().__init__(name, input_dim, output_dim)
 
-    def build(self):
+    def build(self) -> None:
         input_tensor = tf.keras.layers.Input(self.input_matrix_dim)
         c0 = input_tensor
 
@@ -161,10 +181,27 @@ class MultiPathEncoderDecoderDropout(Model):
 
 
 class MultiPathEncoderDecoder(Model):
+    """
+    MultiPathEncoderDecoder is a multi-path implementation of the Encoder-Decoder architecture.
+
+    References:
+    - Clemens Zimmerling "Machine learning algorithms for efficient process optimisation of variable geometries at the example of fabric forming" - DOI:10.5445/IR/1000154623
+
+    Attributes:
+    - input_matrix_dim: Dimensionality of the matrix input.
+    - input_vector_dim: Dimensionality of the vector input.
+    - base_filters (int): The initial number of filters for the convolutional layers.
+    - initializer (str): Initializer for the weights of layers.
+    - activation (str): Activation function used in the network.
+    - hidden_neurons (int): Number of neurons in the hidden layers.
+    - positional_encoding (int): Type of positional encoding to apply. Default is 0 (no encoding).
+    - upsampling_interpolation (str): Upsampling interpolation method.
+    """
+
     def __init__(self, name: str, input_dim, output_dim, base_filters: int = 64,
                  activation: str = 'relu', initializer: str = 'glorot_uniform',
                  hidden_neurons: int = 500, positional_encoding: int = 0,
-                 upsampling_interpolation: str = 'nearest'):
+                 upsampling_interpolation: str = 'nearest') -> None:
         self.input_matrix_dim, self.input_vector_dim = input_dim
         self.base_filters = base_filters
         self.initializer = initializer
@@ -174,7 +211,7 @@ class MultiPathEncoderDecoder(Model):
         self.upsampling_interpolation = upsampling_interpolation
         super().__init__(name, input_dim, output_dim)
 
-    def build(self):
+    def build(self) -> None:
         input_tensor = tf.keras.layers.Input(self.input_matrix_dim)
         c0 = input_tensor
 
@@ -191,37 +228,37 @@ class MultiPathEncoderDecoder(Model):
         p1 = tf.keras.layers.MaxPooling2D((2, 2))(c1)
 
         c2 = tf.keras.layers.Conv2D(filters=self.base_filters * 2, kernel_size=(7, 7), strides=(1, 1),
-                                          activation=self.activation,
-                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
-                                          padding='same')(p1)
+                                    activation=self.activation,
+                                    kernel_initializer=tf.keras.initializers.GlorotUniform(),
+                                    padding='same')(p1)
         c2 = tf.keras.layers.BatchNormalization()(c2)
         p2 = tf.keras.layers.MaxPooling2D((2, 2))(c2)
 
         c3 = tf.keras.layers.Conv2D(filters=self.base_filters * 4, kernel_size=(5, 5), strides=(1, 1),
-                                          activation=self.activation,
-                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
-                                          padding='same')(p2)
+                                    activation=self.activation,
+                                    kernel_initializer=tf.keras.initializers.GlorotUniform(),
+                                    padding='same')(p2)
         c3 = tf.keras.layers.BatchNormalization()(c3)
         p3 = tf.keras.layers.MaxPooling2D((2, 2))(c3)
 
         c4 = tf.keras.layers.Conv2D(filters=self.base_filters * 8, kernel_size=(5, 5), strides=(1, 1),
-                                          activation=self.activation,
-                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
-                                          padding='same')(p3)
+                                    activation=self.activation,
+                                    kernel_initializer=tf.keras.initializers.GlorotUniform(),
+                                    padding='same')(p3)
         c4 = tf.keras.layers.BatchNormalization()(c4)
         p4 = tf.keras.layers.MaxPooling2D((2, 2))(c4)
 
         c5 = tf.keras.layers.Conv2D(filters=self.base_filters * 8, kernel_size=(3, 3), strides=(1, 1),
-                                          activation=self.activation,
-                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
-                                          padding='same')(p4)
+                                    activation=self.activation,
+                                    kernel_initializer=tf.keras.initializers.GlorotUniform(),
+                                    padding='same')(p4)
         c5 = tf.keras.layers.BatchNormalization()(c5)
         p5 = tf.keras.layers.MaxPooling2D((2, 2))(c5)
 
         c6 = tf.keras.layers.Conv2D(filters=self.base_filters * 8, kernel_size=(2, 2), strides=(1, 1),
-                                          activation=self.activation,
-                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
-                                          padding='same')(p5)
+                                    activation=self.activation,
+                                    kernel_initializer=tf.keras.initializers.GlorotUniform(),
+                                    padding='same')(p5)
         c6 = tf.keras.layers.BatchNormalization()(c6)
         p6 = tf.keras.layers.MaxPooling2D((2, 2))(c6)
 
@@ -242,41 +279,41 @@ class MultiPathEncoderDecoder(Model):
         u1 = tf.keras.layers.Resizing(c6.shape[1], c6.shape[2], interpolation=self.upsampling_interpolation,
                                       crop_to_aspect_ratio=False)(combined)
         c7 = tf.keras.layers.Conv2D(filters=self.base_filters * 16, kernel_size=(2, 2), strides=(1, 1),
-                                          activation=self.activation,
-                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
-                                          padding='same')(u1)
+                                    activation=self.activation,
+                                    kernel_initializer=tf.keras.initializers.GlorotUniform(),
+                                    padding='same')(u1)
         c7 = tf.keras.layers.BatchNormalization()(c7)
 
         u2 = tf.keras.layers.Resizing(c5.shape[1], c5.shape[2], interpolation=self.upsampling_interpolation,
                                       crop_to_aspect_ratio=False)(c7)
         c8 = tf.keras.layers.Conv2D(filters=self.base_filters * 16, kernel_size=(3, 3), strides=(1, 1),
-                                          activation=self.activation,
-                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
-                                          padding='same')(u2)
+                                    activation=self.activation,
+                                    kernel_initializer=tf.keras.initializers.GlorotUniform(),
+                                    padding='same')(u2)
         c8 = tf.keras.layers.BatchNormalization()(c8)
 
         u3 = tf.keras.layers.Resizing(c4.shape[1], c4.shape[2], interpolation=self.upsampling_interpolation,
                                       crop_to_aspect_ratio=False)(c8)
         c9 = tf.keras.layers.Conv2D(filters=self.base_filters * 8, kernel_size=(5, 5), strides=(1, 1),
-                                          activation=self.activation,
-                                          kernel_initializer=tf.keras.initializers.GlorotUniform(),
-                                          padding='same')(u3)
+                                    activation=self.activation,
+                                    kernel_initializer=tf.keras.initializers.GlorotUniform(),
+                                    padding='same')(u3)
         c9 = tf.keras.layers.BatchNormalization()(c9)
 
         u4 = tf.keras.layers.Resizing(c3.shape[1], c3.shape[2], interpolation=self.upsampling_interpolation,
                                       crop_to_aspect_ratio=False)(c9)
         c10 = tf.keras.layers.Conv2D(filters=self.base_filters * 4, kernel_size=(5, 5), strides=(1, 1),
-                                           activation=self.activation,
-                                           kernel_initializer=tf.keras.initializers.GlorotUniform(),
-                                           padding='same')(u4)
+                                     activation=self.activation,
+                                     kernel_initializer=tf.keras.initializers.GlorotUniform(),
+                                     padding='same')(u4)
         c10 = tf.keras.layers.BatchNormalization()(c10)
 
         u5 = tf.keras.layers.Resizing(c2.shape[1], c2.shape[2], interpolation=self.upsampling_interpolation,
                                       crop_to_aspect_ratio=False)(c10)
         c11 = tf.keras.layers.Conv2D(filters=self.base_filters * 2, kernel_size=(7, 7), strides=(1, 1),
-                                           activation=self.activation,
-                                           kernel_initializer=tf.keras.initializers.GlorotUniform(),
-                                           padding='same')(u5)
+                                     activation=self.activation,
+                                     kernel_initializer=tf.keras.initializers.GlorotUniform(),
+                                     padding='same')(u5)
         c11 = tf.keras.layers.BatchNormalization()(c11)
 
         u6 = tf.keras.layers.Resizing(c1.shape[1], c1.shape[2], interpolation=self.upsampling_interpolation,

@@ -1,3 +1,11 @@
+"""
+Script for generating and saving prediction metrics.
+
+This script creates a series of K-Nearest Neighbor models, with varying values of 'k',
+to predict matrices based on input data. Various metrics are used to evaluate the
+quality of these predictions. Results for each 'k' and metric are saved to a CSV file.
+"""
+
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
@@ -18,6 +26,7 @@ for path in tqdm(df['strain_field_matrix_path']):
 matrices = np.array(matrices)
 
 df.drop(['strain_field_matrix_path'], axis=1, inplace=True)
+
 
 def obj_function(matrix, p=4):
     return tf.norm(matrix, ord=p)
@@ -89,4 +98,4 @@ for mode, data in [('no_distance', k_metrics), ('distance', k_metrics_distance)]
 
 df_results = pd.DataFrame(result_list)
 
-df_results.to_csv('results_knn_25.csv', index=False)
+df_results.to_csv(f'results_knn_{max_k}.csv', index=False)

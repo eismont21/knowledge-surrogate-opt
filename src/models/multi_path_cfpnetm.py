@@ -8,9 +8,28 @@ from keras.layers import add
 
 
 class MultiPathCFPNetM(Model):
+    """
+    MultiPathCFPNetM is a multi-path implementation of the CFPNet-M model with concrete dropout functionality for medical imaging segmentation.
+
+    References:
+    - Ange Lou et al. "CFPNet-M: A Light-Weight Encoder-Decoder Based Network for Multimodal Biomedical Image Real-Time Segmentation" - arXiv:2103.12212
+
+    Attributes:
+    - input_matrix_dim: Dimensionality of the matrix input.
+    - input_vector_dim: Dimensionality of the vector input.
+    - base_filters (int): The initial number of filters for the convolutional layers.
+    - initializer (str): Initializer for the weights of layers.
+    - activation (str): Activation function used in the network.
+    - hidden_neurons (int): Number of neurons in the hidden layers.
+    - positional_encoding (int): Type of positional encoding to apply. Default is 0 (no encoding).
+    - wr (float): Weight regularization parameter.
+    - dr (float): Dropout regularization parameter.
+    - is_mc_dropout (bool): Dropout regularization parameter.
+    """
+
     def __init__(self, name: str, input_dim, output_dim, train_size: int = 100, base_filters: int = 64,
                  activation: str = 'relu', initializer: str = 'he_normal', hidden_neurons: int = 500,
-                 positional_encoding: int = 0, is_mc_dropout: bool = False):
+                 positional_encoding: int = 0, is_mc_dropout: bool = False) -> None:
         self.input_matrix_dim, self.input_vector_dim = input_dim
         self.base_filters = base_filters
         self.initializer = initializer
@@ -22,8 +41,8 @@ class MultiPathCFPNetM(Model):
         self.is_mc_dropout = is_mc_dropout
         super().__init__(name, input_dim, output_dim)
 
-    def conv2d_bn(self, x, filters, kernel_size=(3, 3), d_rate=1, strides=(1, 1), padding='same', activation='relu',
-                  groups=1):
+    def conv2d_bn(self, x: tf.Tensor, filters: int, kernel_size=None, d_rate: int = 1, strides: (int, int) = (1, 1),
+                  padding: str = 'same', activation: str = 'relu', groups: int = 1) -> tf.Tensor:
         x = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, dilation_rate=d_rate,
                                    strides=strides, activation=activation, padding=padding,
                                    kernel_initializer=self.initializer, groups=groups)(x)
@@ -31,17 +50,7 @@ class MultiPathCFPNetM(Model):
 
         return x
 
-    def cfp_module(self, inp, filters, d_size):
-        '''
-        CFP module for medicine
-
-        Arguments:
-            U {int} -- Number of filters in a corrsponding UNet stage
-            inp {keras layer} -- input layer
-
-        Returns:
-            [keras layer] -- [output layer]
-        '''
+    def cfp_module(self, inp: tf.Tensor, filters: int, d_size: int) -> tf.Tensor:
         x_inp = self.conv2d_bn(inp, filters // 4, kernel_size=(1, 1))
         x_1_1 = self.conv2d_bn(x_inp, filters // 16, groups=filters // 16)
         x_1_2 = self.conv2d_bn(x_1_1, filters // 16, groups=filters // 16)
@@ -80,7 +89,7 @@ class MultiPathCFPNetM(Model):
 
         return output
 
-    def build(self):
+    def build(self) -> None:
         input_tensor = tf.keras.layers.Input(self.input_matrix_dim)
         c0 = input_tensor
 

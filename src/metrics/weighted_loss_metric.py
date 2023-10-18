@@ -2,10 +2,25 @@ import tensorflow as tf
 from src.scaler import Scaler
 from src.utils import importance_matrix
 from src.constants import MATRIX_SHAPE
+from typing import Callable, Tuple
 
 
 class WeightedLossMetric(tf.keras.metrics.Metric):
-    def __init__(self, obj_function, loss_fn, inverse=False, name="weighted_loss", scale_range=(0.1, 1), **kwargs):
+    """
+    Custom metric that computes a weighted loss using importance matrices.
+
+    Attributes:
+    - obj_function (Callable): Objective function used to compute the importance matrix.
+    - loss_fn (Callable): Original loss function to which the importance weighting is applied.
+    - scale_range (Tuple[float, float]): Range for scaling the importance matrix values.
+    - total (tf.Tensor): Accumulator for the total weighted loss across batches.
+    - count (tf.Tensor): Total number of elements used for calculating the weighted loss.
+    - scaler (Scaler): Instance of the Scaler class to inverse transform values.
+    - inverse (bool): If True, inverse transformation is applied to the inputs.
+    """
+
+    def __init__(self, obj_function: Callable, loss_fn: Callable, inverse: bool = False, name: str = "weighted_loss",
+                 scale_range: Tuple[float, float] = (0.1, 1), **kwargs) -> None:
         super(WeightedLossMetric, self).__init__(name=name, **kwargs)
         self.obj_function = obj_function
         self.loss_fn = loss_fn
@@ -15,7 +30,7 @@ class WeightedLossMetric(tf.keras.metrics.Metric):
         self.scaler = Scaler()
         self.inverse = inverse
 
-    def update_state(self, y_true, y_pred, sample_weight=None):
+    def update_state(self, y_true: tf.Tensor, y_pred: tf.Tensor, sample_weight=None) -> None:
         if len(tf.shape(y_true)) != 4:
             y_true = tf.reshape(y_true, [-1, *MATRIX_SHAPE, 1])
             y_pred = tf.reshape(y_pred, [-1, *MATRIX_SHAPE, 1])
@@ -32,9 +47,9 @@ class WeightedLossMetric(tf.keras.metrics.Metric):
         self.total.assign_add(batch_size * weighted_loss)
         self.count.assign_add(batch_size)
 
-    def result(self):
+    def result(self) -> tf.Tensor:
         return tf.math.divide_no_nan(self.total, self.count)
 
-    def reset_state(self):
+    def reset_state(self) -> None:
         self.total.assign(0.)
         self.count.assign(0.)

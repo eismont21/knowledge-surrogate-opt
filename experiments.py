@@ -1,3 +1,9 @@
+"""
+Script for generating, training and evaluating neural network models.
+
+This script provides utility functions to facilitate machine learning experiments, including data loading, model creation, loss function assignment, and saving results.
+"""
+
 import os
 import traceback
 
@@ -27,6 +33,12 @@ from src.utils.send_logs import send_log_tg
 
 
 def iterative_split(iterations, train_size=None, test_size=None, seed=42):
+    """
+    Iteratively split data into train and test sets based on the specified sizes.
+
+    This function ensures that the samples are evenly distributed across iterations by
+    maintaining a frequency count for each sample in the train and test sets.
+    """
     data_loader = BaselineDataLoader('data/train_short.csv')
     x, _ = data_loader.load_data()
 
@@ -187,6 +199,9 @@ def get_loss_function(config):
 
 
 def save_history(history, config):
+    """
+    Save the training history to a CSV file.
+    """
     os.makedirs(os.path.join(config['output_dir'], 'metrics'), exist_ok=True)
     history_df = pd.DataFrame(history.history)
     history_df['epoch'] = history.epoch
@@ -195,6 +210,9 @@ def save_history(history, config):
 
 
 def save_history_plots(history_df, config):
+    """
+    Save the training and validation metrics to image plots.
+    """
     metrics_dir = os.path.join(config['output_dir'], 'metrics')
     metrics = [col for col in history_df.columns if not col.startswith('val_') and col != 'epoch']
     dropout_metrics = [col for col in metrics if 'dropout' in col]
@@ -235,6 +253,13 @@ def save_config(config):
 
 
 def run_experiment(config):
+    """
+    Execute a machine learning experiment based on the provided configuration.
+
+    This function encompasses the full pipeline of loading data, splitting it into train and test subsets,
+    setting up and training a model, evaluating the model, and saving the results. The function's behavior
+    can be controlled and modified using the configuration dictionary.
+    """
     data_loader = get_data_loader(config)
     x, y = data_loader.load_data()
     train_indices = config['data']['train_indices']
@@ -315,6 +340,9 @@ def get_remaining_experiments(configs_list):
 
 
 def worker(config, gpu_queue):
+    """
+    Worker function to run an experiment on a specific GPU.
+    """
     gc.collect()
 
     gpu_id = gpu_queue.get()
@@ -351,15 +379,14 @@ def worker(config, gpu_queue):
 
 
 def p_norm(matrix, p=4):
+    """
+    The user-defined objective function.
+    """
     return tf.norm(matrix, ord=p)
 
 
-# with open('configs_pos_enc.json', 'r') as f:
 # with open('configs_loss.json', 'r') as f:
 #    configs = json.load(f)
-
-# configs = get_remaining_experiments(configs)
-# configs = [ex for ex in configs if ex['run'] > 2]
 
 configs = []
 
@@ -390,6 +417,9 @@ gpus = ["1", "2"]
 
 
 def main():
+    """
+    Main function to initialize GPU queue and start experiments.
+    """
     with Manager() as manager:
         gpu_queue = manager.Queue()
         for gpu_id in gpus:

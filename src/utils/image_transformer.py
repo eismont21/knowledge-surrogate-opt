@@ -14,32 +14,34 @@ import inspect
 
 from src.utils.ags import asymmetric_greedy_search
 
+
 class ManifoldLearner(Protocol):
     def fit_transform(self: 'ManifoldLearner',
                       X: np.ndarray) -> np.ndarray: pass
 
 
 class ImageTransformer:
-    """Transform features to an image matrix using dimensionality reduction
+    """
+    Transform features to an image matrix using dimensionality reduction
 
     This class takes in data normalized between 0 and 1 and converts it to a
     CNN compatible 'image' matrix
-
     """
 
     def __init__(self, feature_extractor: Union[str, ManifoldLearner] = 'tsne',
                  discretization: str = 'bin',
                  pixels: Union[int, Tuple[int, int]] = (224, 224)) -> None:
-        """Generate an ImageTransformer instance
+        """
+        Generate an ImageTransformer instance
 
         Args:
-            feature_extractor: string of value ('tsne', 'pca', 'kpca') or a
+        - feature_extractor: string of value ('tsne', 'pca', 'kpca') or a
                 class instance with method `fit_transform` that returns a
                 2-dimensional array of extracted features.
-            discretization: string of values ('bin', 'assignment'). Defines
+        - discretization: string of values ('bin', 'assignment'). Defines
                 the method for discretizing dimensionally reduced data to pixel
                 coordinates.
-            pixels: int (square matrix) or tuple of ints (height, width) that
+        - pixels: int (square matrix) or tuple of ints (height, width) that
                 defines the size of the image matrix.
         """
         self._fe = self._parse_feature_extractor(feature_extractor)
@@ -50,11 +52,15 @@ class ImageTransformer:
 
     @staticmethod
     def _parse_pixels(pixels: Union[int, Tuple[int, int]]) -> Tuple[int, int]:
-        """Check and correct pixel parameter
+        """
+        Check and correct pixel parameter
 
         Args:
-            pixels: int (square matrix) or tuple of ints (height, width) that
-                defines the size of the image matrix.
+        - pixels: Pixel value which can be a single integer (square matrix) or
+            a tuple (height, width).
+
+        Returns:
+        - Tuple of integers representing the pixel dimensions.
         """
         if isinstance(pixels, int):
             pixels = (pixels, pixels)
@@ -63,16 +69,16 @@ class ImageTransformer:
     @staticmethod
     def _parse_feature_extractor(
             feature_extractor: Union[str, ManifoldLearner]) -> ManifoldLearner:
-        """Validate the feature extractor value passed to the
+        """
+        Validate the feature extractor value passed to the
         constructor method and return correct method
 
         Args:
-            feature_extractor: string of value ('tsne', 'pca', 'kpca') or a
-                class instance with method `fit_transform` that returns a
-                2-dimensional array of extracted features.
+        - feature_extractor: Either a string indicating the type of dimensionality
+            reduction or a custom instance with a `fit_transform` method.
 
         Returns:
-            function
+        - A suitable feature extraction function or instance.
         """
         if isinstance(feature_extractor, str):
             fe = feature_extractor.casefold()
@@ -95,14 +101,15 @@ class ImageTransformer:
 
     @classmethod
     def _parse_discretization(cls, method: str):
-        """Validate the discretization value passed to the
+        """
+        Validate the discretization value passed to the
         constructor method and return correct function
 
         Args:
-            method: string of value ('bin', 'assignment')
+        - method: A string indicating the discretization method.
 
         Returns:
-            function
+        - A function corresponding to the desired discretization method.
         """
         if method == 'bin':
             func = cls.coordinate_binning
@@ -121,11 +128,11 @@ class ImageTransformer:
         feature position and pixel locations.
 
         Args:
-            position: a 2d array of feature coordinates
-            px_size: tuple with image dimensions
+        - position: 2D array of feature coordinates.
+        - px_size: Desired pixel dimensions.
 
         Returns:
-            a 2d array of feature to pixel mappings
+        - 2D array mapping features to pixel coordinates.
         """
         scaled = cls.scale_coordinates(position, px_size)
         px_binned = np.floor(scaled).astype(int)
@@ -136,10 +143,28 @@ class ImageTransformer:
 
     @staticmethod
     def lsap_optimal_solution(cost_matrix):
+        """
+        Finds the optimal solution for the Linear Sum Assignment Problem.
+
+        Args:
+        - cost_matrix: A matrix that represents the costs of assigning tasks to agents.
+
+        Returns:
+        - A tuple containing two arrays representing the indices of the optimal assignment.
+        """
         return linear_sum_assignment(cost_matrix)
 
     @staticmethod
     def lsap_heuristic_solution(cost_matrix):
+        """
+        Finds a heuristic solution for the Linear Sum Assignment Problem.
+
+        Args:
+        - cost_matrix: A matrix that represents the costs of assigning tasks to agents.
+
+        Returns:
+        - A tuple containing two arrays representing the indices of the heuristic assignment.
+        """
         return asymmetric_greedy_search(cost_matrix,
                                         shuffle=True,
                                         minimize=True)
@@ -147,16 +172,17 @@ class ImageTransformer:
     @classmethod
     def coordinate_optimal_assignment(cls, position: np.ndarray,
                                       px_size: Tuple[int, int]) -> np.ndarray:
-        """Determine the pixel location of each feature using a linear sum
+        """
+        Determine the pixel location of each feature using a linear sum
         assignment problem solution on the exponential on the euclidean
         distances between the features and the pixels
 
         Args:
-            position: a 2d array of feature coordinates
-            px_size: tuple with image dimensions
+        - position: 2D array of feature coordinates.
+        - px_size: Desired pixel dimensions.
 
         Returns:
-            a 2d array of feature to pixel mappings
+        - 2D array mapping features to pixel coordinates.
         """
         scaled = cls.scale_coordinates(position, px_size)
         px_centers = cls.calculate_pixel_centroids(px_size)
@@ -193,6 +219,16 @@ class ImageTransformer:
     @classmethod
     def coordinate_heuristic_assignment(cls, position: np.ndarray,
                                         px_size: Tuple[int, int]) -> np.ndarray:
+        """
+        Determine feature-to-pixel mappings using heuristic assignment.
+
+        Args:
+        - position: 2D array of feature coordinates.
+        - px_size: Desired pixel dimensions.
+
+        Returns:
+        - 2D array mapping features to pixel coordinates.
+        """
 
         scaled = cls.scale_coordinates(position, px_size)
         px_centers = cls.calculate_pixel_centroids(px_size)
@@ -224,13 +260,14 @@ class ImageTransformer:
 
     @staticmethod
     def calculate_pixel_centroids(px_size: Tuple[int, int]) -> np.ndarray:
-        """Generate a 2d array of the centroid of each pixel
+        """
+        Calculate the centroids of the pixels.
 
         Args:
-            px_size: tuple with image dimensions
+        - px_size: Desired pixel dimensions.
 
         Returns:
-            a 2d array of pixel centroid locations
+        - 2D array of pixel centroid locations.
         """
         px_map = np.empty((np.prod(px_size), 2))
         for i in range(0, px_size[0]):
@@ -241,16 +278,16 @@ class ImageTransformer:
 
     def fit(self, X: np.ndarray, y: Optional[np.ndarray] = None,
             plot: bool = False):
-        """Train the image transformer from the training set (X)
+        """
+        Train the ImageTransformer using input data.
 
         Args:
-            X: {array-like, sparse matrix} of shape (n_samples, n_features)
-            y: Ignored. Present for continuity with scikit-learn
-            plot: boolean of whether to produce a scatter plot showing the
-                feature reduction, hull points, and minimum bounding rectangle
+        - X: Input data matrix.
+        - y: Unused, present for compatibility.
+        - plot: Whether to visualize the transformation process.
 
         Returns:
-            self: object
+        - Updated ImageTransformer instance.
         """
         # perform dimensionality reduction
         x_new = self._fe.fit_transform(X.T)
@@ -277,22 +314,22 @@ class ImageTransformer:
 
     @property
     def pixels(self) -> Tuple[int, int]:
-        """The image matrix dimensions
+        """
+        The image matrix dimensions
 
         Returns:
-            tuple: the image matrix dimensions (height, width)
-
+        - tuple: the image matrix dimensions (height, width)
         """
         return self._pixels
 
     @pixels.setter
     def pixels(self, pixels: Union[int, Tuple[int, int]]) -> None:
-        """Set the image matrix dimension
+        """
+        Set the image matrix dimension
 
         Args:
-            pixels: int or tuple with the dimensions (height, width)
+        - pixels: int or tuple with the dimensions (height, width)
             of the image matrix
-
         """
         if isinstance(pixels, int):
             pixels = (pixels, pixels)
@@ -303,15 +340,16 @@ class ImageTransformer:
 
     @staticmethod
     def scale_coordinates(coords: np.ndarray, dim_max: np.ndarray) -> np.ndarray:
-        """Transforms a list of n-dimensional coordinates by scaling them
+        """
+        Transforms a list of n-dimensional coordinates by scaling them
         between zero and the given dimensional maximum
 
         Args:
-            coords: a 2d ndarray of coordinates
-            dim_max: a list of maximum ranges for each dimension of coords
+        - coords: a 2d ndarray of coordinates
+        - dim_max: a list of maximum ranges for each dimension of coords
 
         Returns:
-            a 2d ndarray of scaled coordinates
+        - a 2d ndarray of scaled coordinates
         """
         data_min = coords.min(axis=0)
         data_max = coords.max(axis=0)
@@ -320,8 +358,11 @@ class ImageTransformer:
         return scaled
 
     def _calculate_coords(self) -> None:
-        """Calculate the matrix coordinates of each feature based on the
-        pixel dimensions.
+        """
+        Calculate the matrix coordinates of each feature based on the pixel dimensions.
+
+        The method scales the internal rotated coordinates to match the provided pixel
+        dimensions and then calculates the pixel coordinates for each feature.
         """
         scaled = self.scale_coordinates(self._xrot, self._pixels)
         px_coords = self._dm(scaled, self._pixels)
@@ -329,19 +370,20 @@ class ImageTransformer:
 
     def transform(self, X: np.ndarray, img_format: str = 'rgb',
                   empty_value: int = 0) -> np.ndarray:
-        """Transform the input matrix into image matrices
+        """
+        Transform the input matrix into image matrices
 
         Args:
-            X: {array-like, sparse matrix} of shape (n_samples, n_features)
+        - X: {array-like, sparse matrix} of shape (n_samples, n_features)
                 where n_features matches the training set.
-            img_format: The format of the image matrix to return.
+        - img_format: The format of the image matrix to return.
                 'scalar' returns an array of shape (M, N). 'rgb' returns
                 a numpy.ndarray of shape (M, N, 3) that is compatible with PIL.
-            empty_value: numeric value to fill elements where no features are
+        - empty_value: numeric value to fill elements where no features are
                 mapped. Default = 0.
 
         Returns:
-            A list of n_samples numpy matrices of dimensions set by
+        - A list of n_samples numpy matrices of dimensions set by
             the pixel parameter
         """
         img_coords = pd.DataFrame(np.vstack((
@@ -356,7 +398,7 @@ class ImageTransformer:
         for z in range(2, img_coords.shape[1]):
             img_matrix = blank_mat.copy()
             img_matrix[img_coords[0].astype(int),
-                       img_coords[1].astype(int)] = img_coords[z]
+            img_coords[1].astype(int)] = img_coords[z]
             img_list.append(img_matrix)
 
         # img_matrices = np.empty(0) ---- REMOVE?
@@ -384,13 +426,14 @@ class ImageTransformer:
         return self.transform(X, **kwargs)
 
     def inverse_transform(self, img: np.ndarray) -> np.ndarray:
-        """Transform an image layer back to its original space.
-            Args:
-                img:
+        """
+        Transform an image layer back to its original feature space.
 
-            Returns:
-                A list of n_samples numpy matrices of dimensions set by
-                the pixel parameter
+        Args:
+        - img (np.ndarray): The image matrix to inverse transform.
+
+        Returns:
+        - np.ndarray: The feature space representation of the image.
         """
         if img.ndim == 2 and img.shape == self._pixels:
             X = img[self._coords[:, 0], self._coords[:, 1]]
@@ -407,41 +450,48 @@ class ImageTransformer:
         return X
 
     def feature_density_matrix(self) -> np.ndarray:
-        """Generate image matrix with feature counts per pixel
+        """
+        Generate an image matrix with feature counts per pixel.
+
+        The resulting matrix will have the same dimensions as specified by the pixels attribute.
+        Each pixel value represents the number of features mapped to it.
 
         Returns:
-            img_matrix (ndarray): matrix with feature counts per pixel
+        - np.ndarray: Matrix with feature counts per pixel.
         """
         fdmat = np.zeros(self._pixels)
         np.add.at(fdmat, tuple(self._coords.T), 1)
         return fdmat
 
     def coords(self) -> np.ndarray:
-        """Get feature coordinates
+        """
+        Get the pixel coordinates for each feature.
+
+        This method provides a way to retrieve the cached coordinates
+        for the features after they have been transformed to the image space.
 
         Returns:
-            ndarray: the pixel coordinates for features
+        - np.ndarray: An array of pixel coordinates for each feature.
         """
         return self._coords.copy()
 
     @staticmethod
     def _minimum_bounding_rectangle(hull_points: np.ndarray
                                     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Find the smallest bounding rectangle for a set of points.
+        """
+        Find the smallest bounding rectangle for a set of points.
 
-        Modified from JesseBuesking at https://stackoverflow.com/a/33619018
-        Returns a set of points representing the corners of the bounding box.
+        This method computes the smallest rectangle that can contain all the provided points.
+        It's a modified version from a solution on StackOverflow.
 
         Args:
-            hull_points : an nx2 matrix of hull coordinates
+        - hull_points (np.ndarray): An nx2 matrix of hull coordinates.
 
         Returns:
-            (tuple): tuple containing
-                coords (ndarray): coordinates of the corners of the rectangle
-                rotmat (ndarray): rotation matrix to align edges of rectangle
-                    to x and y
+        - tuple:
+                coords (np.ndarray): Coordinates of the corners of the rectangle.
+                rotmat (np.ndarray): Rotation matrix to align edges of rectangle to x and y.
         """
-
         pi2 = np.pi / 2
         # calculate edge angles
         edges = hull_points[1:] - hull_points[:-1]
@@ -482,13 +532,16 @@ class ImageTransformer:
 
     @staticmethod
     def _mat_to_rgb(mat: np.ndarray) -> np.ndarray:
-        """Convert image matrix to numpy rgb format
+        """
+        Convert a scalar image matrix to an RGB format.
+
+        The method takes an input matrix and repeats its values across
+        the RGB channels to create a 3-channel image.
 
         Args:
-            mat: {array-like} (M, N)
+        - mat (np.ndarray): 2D array-like image matrix of shape (M, N).
 
         Returns:
-            An numpy.ndarray (M, N, 3) with original values repeated across
-            RGB channels.
+        - np.ndarray: 3D array-like image matrix of shape (M, N, 3).
         """
         return np.repeat(mat[:, :, np.newaxis], 3, axis=2)

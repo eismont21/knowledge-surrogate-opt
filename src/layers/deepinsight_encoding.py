@@ -8,13 +8,24 @@ from src.scaler import Scaler
 
 class DeepInsightEncoding(tf.keras.layers.Layer):
     """
-    DeepInsight encoding layer.
-    Sources:
-    - https://github.com/anuraganands/Non-image-data-classification-with-CNN/tree/master
-    - https://github.com/alok-ai-lab/pyDeepInsight
+    Custom encoding layer that represents data using the DeepInsight+ method. 
+
+    This layer provides various channels, including the deepinsight channel, row-wise copies,
+    normalized distance channel, and an equidistant bar graph representation of the input data.
+
+    Attributes:
+    - x_train (np.ndarray): Training data used for some transformations.
+    - stamp_shape_matrix_path (str): Path to the matrix representing stamp shape.
+    - stamp_shape_matrix_shape (Tuple[int, int, int]): Shape of the loaded stamp shape matrix.
+    - stamp_shape_matrix (tf.Tensor): Tensor version of the loaded stamp shape matrix.
+    
+    References:
+    - Alok Sharma et al. "DeepInsight: A methodology to transform a non-image data to an image for convolution neural network architecture" - doi.org/10.1038/s41598-019-47765-6
+    - Anuraganand Sharma et al. "Classification with 2-D Convolutional Neural Networks for breast cancer diagnosis" - arXiv:2007.03218
     """
-    def __init__(self, x_train, name='deepinsight_encoding',
-                 stamp_shape_matrix_path=STAMP_SHAPE_MATRIX_PATH, **kwargs):
+
+    def __init__(self, x_train: np.ndarray, name: str = 'deepinsight_encoding',
+                 stamp_shape_matrix_path: str = STAMP_SHAPE_MATRIX_PATH, **kwargs) -> None:
         super().__init__(name=name, **kwargs)
         self.x_train = x_train
         self.stamp_shape_matrix_path = stamp_shape_matrix_path
@@ -40,7 +51,7 @@ class DeepInsightEncoding(tf.keras.layers.Layer):
         it.fit(self.x_train)
         self.coords = it._coords.astype(np.int32)
 
-    def build(self, input_shape):
+    def build(self, input_shape: tf.TensorShape) -> None:
         self.input_dim = input_shape[-1]
         height, width = self.stamp_shape_matrix_shape[:-1]
 
@@ -68,7 +79,7 @@ class DeepInsightEncoding(tf.keras.layers.Layer):
         super().build(input_shape)
 
     @tf.function
-    def call(self, inputs):
+    def call(self, inputs: tf.Tensor) -> tf.Tensor:
         batch_size = tf.shape(inputs)[0]
         deepinsight_channel = self.deepinsignt(inputs, batch_size)
         row_wise_copy = self.row_wise_copy(inputs, batch_size)
@@ -83,7 +94,7 @@ class DeepInsightEncoding(tf.keras.layers.Layer):
 
         return result
 
-    def deepinsignt(self, inputs, batch_size):
+    def deepinsignt(self, inputs: tf.Tensor, batch_size: int) -> tf.Tensor:
         batch_coords = tf.tile(self.coords, [batch_size, 1])
         batch_coords = tf.reshape(batch_coords, [batch_size, self.coords.shape[0], self.coords.shape[-1]])
 
@@ -99,7 +110,7 @@ class DeepInsightEncoding(tf.keras.layers.Layer):
         new_channel = tf.expand_dims(new_channel, axis=-1)
         return new_channel
 
-    def row_wise_copy(self, inputs, batch_size):
+    def row_wise_copy(self, inputs: tf.Tensor, batch_size: int) -> tf.Tensor:
         repeated_indices = tf.repeat(tf.range(self.input_dim), self.rows_per_value)
 
         inputs_expanded = tf.gather(inputs, repeated_indices, axis=1)
@@ -109,7 +120,7 @@ class DeepInsightEncoding(tf.keras.layers.Layer):
         new_channel = tf.expand_dims(new_channel, axis=-1)
         return new_channel
 
-    def normalized_distance(self, inputs):
+    def normalized_distance(self, inputs: tf.Tensor) -> tf.Tensor:
         inputs_expanded = tf.expand_dims(inputs, axis=2)
         batched_distance_matrices = tf.math.abs(inputs_expanded - tf.transpose(inputs_expanded, perm=[0, 2, 1]))
 
@@ -123,7 +134,7 @@ class DeepInsightEncoding(tf.keras.layers.Layer):
         new_channel = tf.expand_dims(expanded_matrix, axis=-1)
         return new_channel
 
-    def equidistant_bar_graph(self, inputs, batch_size):
+    def equidistant_bar_graph(self, inputs: tf.Tensor, batch_size: int) -> tf.Tensor:
         height, width = self.stamp_shape_matrix_shape[:-1]
 
         bar_plot = tf.zeros((batch_size, height, width), dtype=inputs.dtype)
@@ -153,7 +164,7 @@ class DeepInsightEncoding(tf.keras.layers.Layer):
 
         return new_channel
 
-    def get_config(self):
+    def get_config(self) -> dict:
         config = super().get_config()
         config.update({
             "stamp_shape_matrix_path": self.stamp_shape_matrix_path,

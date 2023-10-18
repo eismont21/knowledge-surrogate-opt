@@ -3,7 +3,18 @@ from src.scaler import Scaler
 
 
 class ToleranceAccuracy(tf.keras.metrics.Metric):
-    def __init__(self, tolerance, inverse=False, name='tolerance_accuracy', **kwargs):
+    """
+    Custom metric to measure the accuracy of predictions within a certain tolerance.
+
+    Attributes:
+    - tolerance (float): The acceptable difference between true and predicted values.
+    - inverse (bool): If True, inverse transformation is applied to the inputs.
+    - acc (tf.Tensor): Sum of accuracies.
+    - count (tf.Tensor): otal number of elements used for calculating the accuracy.
+    - scaler (Scaler): Instance of the Scaler class to inverse transform values.
+    """
+
+    def __init__(self, tolerance: float, inverse: bool = False, name: str = 'tolerance_accuracy', **kwargs) -> None:
         super().__init__(name=name, **kwargs)
         self.acc = self.add_weight(name="acc", initializer="zeros")
         self.count = self.add_weight(name="count", initializer="zeros")
@@ -13,7 +24,7 @@ class ToleranceAccuracy(tf.keras.metrics.Metric):
         if not self.inverse:
             self.tolerance = self.scaler.scale(self.tolerance, col_name="strain_field_matrix")
 
-    def update_state(self, y_true, y_pred, sample_weight=None):
+    def update_state(self, y_true: tf.Tensor, y_pred: tf.Tensor, sample_weight=None) -> None:
         y_true = tf.reshape(y_true, [tf.shape(y_true)[0], -1])
         y_pred = tf.reshape(y_pred, [tf.shape(y_pred)[0], -1])
 
@@ -32,9 +43,9 @@ class ToleranceAccuracy(tf.keras.metrics.Metric):
         self.acc.assign_add(sum_acc)
         self.count.assign_add(count)
 
-    def result(self):
+    def result(self) -> tf.Tensor:
         return tf.math.divide_no_nan(self.acc, self.count)
 
-    def reset_state(self):
+    def reset_state(self) -> None:
         self.acc.assign(0.0)
         self.count.assign(0.0)

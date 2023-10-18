@@ -1,3 +1,14 @@
+"""
+Script for Hyperparameter Optimization using DEAP.
+
+This script initializes a genetic algorithm with specific configurations and uses
+the DEAP framework to perform genetic operations like mutation, crossover, and selection.
+During the algorithm's execution, it simulates and evaluates individuals' performance
+using an Oracle instance, tracking and recording the best results. The script also
+keeps a record of the algorithm's progression, storing each trial's details and
+finally saving this data as a CSV file for further analysis.
+"""
+
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -33,6 +44,9 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 
 def p_norm(matrix, p=4):
+    """
+    The user-defined objective function.
+    """
     return float(tf.norm(matrix, ord=p))
 
 

@@ -16,8 +16,27 @@ logger = get_logger(__name__)
 
 
 class SurrogateModel(AbstractModel):
+    """
+        Surrogate Model class to train and predict using the given machine learning model in the optimization process.
+
+    Attributes:
+    - oracle: An external system used for simulations.
+    - scaler (Scaler): A scaler object used for feature scaling.
+    - model: The machine learning model to be used.
+    - data_loader: Data loader object for fetching and processing data.
+    - x_columns: Columns of the X data.
+    - y_columns: Columns of the Y data.
+    - val_dataset: Validation dataset.
+    - n_inferences (int): Number of inferences to make during prediction.
+    - chunk_size (int): Size of chunks in which to break down data for predictions.
+    - obj_function (Callable): The objective function.
+    - save_filepath (str): File path to save models and related data.
+    - opt_start (Optional[datetime]): Start time of the optimization process.
+    - pbar: A progress bar object.
+    """
+
     def __init__(self, configspace, model, data_loader, obj_function, oracle, n_inferences: int = 40,
-                 chunk_size: int = 100, save_filepath: str = 'test_sbo'):
+                 chunk_size: int = 100, save_filepath: str = 'test_sbo') -> None:
         super().__init__(configspace)
         self.oracle = oracle
         self.scaler = Scaler()
@@ -44,7 +63,7 @@ class SurrogateModel(AbstractModel):
 
         os.makedirs(os.path.join(self.save_filepath, 'strain_fields'), exist_ok=True)
 
-    def train(self, X: np.ndarray, y: np.ndarray):
+    def train(self, X: np.ndarray, y: np.ndarray) -> AbstractModel:
         gc.collect()
         X = self.scaler.inverse_transform(X, col_name="gripper_force")
         if self.opt_start is not None:
@@ -72,7 +91,7 @@ class SurrogateModel(AbstractModel):
 
         return self
 
-    def predict(self, x: np.ndarray, covariance_type: str | None = "diagonal"):
+    def predict(self, x: np.ndarray, covariance_type: str | None = "diagonal") -> tuple[np.ndarray, np.ndarray]:
         final_mean = np.zeros(x.shape[0])
         final_variance = np.zeros(x.shape[0])
 
@@ -110,17 +129,17 @@ class SurrogateModel(AbstractModel):
 
         return final_mean, final_variance
 
-    def _create_strain_field(self, index, x):
+    def _create_strain_field(self, index: int, x: pd.Series) -> str:
         x = x.to_numpy()
         strain_field = self.oracle.simulate(x)
         path = os.path.join(self.save_filepath, 'strain_fields', f'{index}.npy')
         np.save(path, strain_field)
         return str(path)
 
-    def predict_marginalized_over_instances(self, X: np.ndarray):
+    def predict_marginalized_over_instances(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         return self.predict(X)
 
-    def _reset_weights(self):
+    def _reset_weights(self) -> None:
         for layer in self.model.model.layers:
             for k, initializer in layer.__dict__.items():
                 if "initializer" not in k:
