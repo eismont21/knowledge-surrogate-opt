@@ -109,7 +109,7 @@ performance of neural networks.
 
 ### SBO Results
 
-![Plot showing SBO results](./results_opt_1.png)
+![Plot showing SBO results](./results_opt.png)
 
 - **Surrogate vs. Traditional Heuristics**: Surrogate models, particularly CFPNet-M, offer a more efficient exploration
   of the solution space, unlike heuristic methods that might not fully grasp the underlying function.
