@@ -19,6 +19,7 @@ challenges.
 2. [Scripts Description](#scripts-description)
 3. [Methodology](#methodology--key-contributions)
 4. [Results](#results)
+5. [Resources](#resources)
 
 ## Installation
 
@@ -117,3 +118,10 @@ performance of neural networks.
   exploration and exploitation for potentially faster and more robust convergence.
 - **Advantages of CFPNet-M in Optimization**: This precise model captures intricate dataset patterns, ensuring that the
   optimization process is driven by detailed insights leading to more optimal solutions.
+
+## Resources
+
+- [Master Thesis](https://drive.google.com/file/d/1xT8gdCf4KUjKuaM_V_lJjZZyNrLVJqlD/view?usp=drive_link) — The complete
+  PDF document of my master thesis, providing detailed explanations and the full context of the research conducted.
+- [Presentation](https://docs.google.com/presentation/d/1W_r7YDsGix6zE4SrbwfPBxiymo1WQukJ3GJEC5ftZ1Y/edit?usp=sharing) —
+  The presentation of my research work, highlighting the key contributions and results.
